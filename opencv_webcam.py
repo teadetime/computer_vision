@@ -3,15 +3,26 @@ import cv2
 import pathlib
 import glob
 import os
-
+import tensorflow as tf
+from tensorflow import keras
+from PIL import Image
 cap = cv2.VideoCapture(0)
 print(cap.get(3), cap.get(4))
 
 # Set to lower res
-directory = pathlib.Path('/home/nathan/catkin_ws/src/computer_vision/images/')
-classes = ['hand', 'something', 'another'].sort()
-im_class = 0
+directory = pathlib.Path.cwd() / 'images'
+print(directory)
+models_dir = pathlib.Path.cwd() / 'models'
 
+input_model = None
+if not input_model:
+    input_model = max(glob.glob(os.path.join(models_dir, '*/')), key=os.path.getmtime)
+print("Loading model from: ", input_model)
+model = keras.models.load_model(input_model)
+
+classes = ['another','hand', 'something']
+classes.sort()
+im_class = 0
 
 cap.set(3,640)
 cap.set(4,480)
@@ -22,7 +33,7 @@ def mk_dirs(dir, list, suffix=''):
             os.makedirs(new_folder)
 
 def get_img_num(path, exten='.jpeg'):
-    list_of_files = glob.glob(str(directory / classes[im_class]) + "/*")
+    list_of_files = glob.glob(str(path) + "/*"+exten)
     try:
         latest_file = max(list_of_files, key=os.path.getctime)
         return int(latest_file.split('.')[0].split('_')[-1])# parse out the number
@@ -41,7 +52,7 @@ while(True):
     ret, frame = cap.read()
 
     # Our operations on the frame come here
-    image = frame#cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    image = frame#cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     # Display the resulting frame
     cv2.imshow(classes[im_class],image)
 
@@ -58,13 +69,38 @@ while(True):
         im_class += 1
         if im_class >= len(classes): im_class = 0
         image_num = get_img_num(directory/classes[im_class])+1
-        print("switching class Right")
+        print("Switching class Right")
     elif key == ord('a'):
         cv2.destroyWindow(classes[im_class])
         im_class -= 1
         if im_class < 0: im_class = len(classes)-1  # Set to end class
         image_num = get_img_num(directory / classes[im_class])+1
         print("Swithing class Left")
+    elif key == ord('p'):
+        # DO prediction on frame
+        sunflower_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/592px-Red_sunflower.jpg"
+        sunflower_path = tf.keras.utils.get_file('Red_sunflower', origin=sunflower_url)
+
+        img = keras.preprocessing.image.load_img(
+            sunflower_path, target_size=(480, 640)
+        )
+        print(type(img))
+        swap_rbg = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(swap_rbg)
+        print(type(img_pil))
+        #
+
+        img_array = keras.preprocessing.image.img_to_array(img_pil)
+        img_array = tf.expand_dims(img_array, 0)  # Create a batch
+
+        predictions = model.predict(img_array)
+        print(predictions)
+        score = tf.nn.softmax(predictions[0])
+        print(
+            "This image most likely belongs to {} with a {:.2f} percent confidence."
+                .format(classes[np.argmax(score)], 100 * np.max(score))
+        )
+
     elif key == ord('q'):
         break
 
