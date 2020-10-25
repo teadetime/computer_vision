@@ -34,7 +34,7 @@ What components of the algorithm will you implement yourself, which will you use
 - ie number of fingers to control speed or closeness to camera, make neato follow the hand
 
 ## What is a stretch goal?
-- Utilisze stereo camera to even crazier things!
+- Utilize stereo camera to even crazier things!
 - Make this work for more than one person ie different skin tones / backgrounds
 
 ## What do you view as the biggest risks to you being successful (where success means achieving your learning goals) on this project?
