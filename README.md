@@ -14,6 +14,7 @@ Nathan
 - Experiment with multiple image processing techniques(ie using mobilenet object detection as well as simplistic hue masking)
 - Attempt to understand hand/finger orientation
 - Create portfolio ready code that is demonstrated working along with a portfolio quality writeup
+
 Sander
 - Implement a deep learning model using a provided data set
 - Become more familiar with various computervision techniques
