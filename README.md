@@ -35,6 +35,12 @@ What components of the algorithm will you implement yourself, which will you use
 
 ## Desired Goal
 - Sophisticated behavior of neato via complex hand movements or patterns.
+
+
+Current Plan
+- Nathan will work on trainging the hand detector object detection
+- Sander will work on finger point detection and hand masking!
+- Nathan Will work on getting some basic images
 - ie number of fingers to control speed or closeness to camera, make neato follow the hand
 
 ## What is a stretch goal?
