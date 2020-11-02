@@ -1,0 +1,17 @@
+item {
+    id: 1
+    name: 'myleft'
+}
+
+item {
+    id: 2
+    name: 'myright'
+}
+item {
+    id: 3
+    name: 'yourleft'
+}
+item {
+    id: 4
+    name: 'yourright'
+}
