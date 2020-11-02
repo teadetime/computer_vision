@@ -99,7 +99,7 @@ while(True):
     key = cv2.waitKey(1) & 0xFF
     if key == ord(' '):
         print("starting inference")
-        run_inference = True
+        run_inference = not run_inference
     elif key == ord('p'):
 
 
