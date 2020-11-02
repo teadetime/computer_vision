@@ -54,6 +54,7 @@ while(True):
     # Our operations on the frame come here
     image = frame#cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     # Display the resulting frame
+    print(type(image))
     cv2.imshow(classes[im_class],image)
 
     # Keyboard control
