@@ -28,8 +28,10 @@ print(cap.get(3), cap.get(4))
 # print(directory)
 # models_dir = pathlib.Path.cwd() / 'models'
 
-cap.set(3,640)
-cap.set(4,480)
+im_width = 640
+im_height = 320
+cap.set(3,im_width)
+cap.set(4,im_height)
 
 run_inference = False
 prune = True
@@ -100,10 +102,19 @@ while(True):
             category_index,
             use_normalized_coordinates=True,
             max_boxes_to_draw=200,
-            min_score_thresh=.30,
+            min_score_thresh=.50,
             agnostic_mode=False)
 
-        # cv2.imshow('Inference_not_pruned', image_copy)
+
+        # Time to process the boxes
+        for num, box in enumerate(selected_boxes):
+            print(box)
+            ymin = int(box[0] * im_height)
+            xmin = int(box[1] * im_width)
+            crop_h = int((box[2] - box[0]) * im_height)
+            crop_w = int((box[3] - box[1]) * im_width)
+            bbox = tf.image.crop_to_bounding_box(image,ymin,xmin, crop_h, crop_w).numpy()
+            cv2.imshow('bbox_'+str(num), bbox)
     cv2.imshow('Inference',image)
 
     # Keyboard control
@@ -113,7 +124,7 @@ while(True):
         run_inference = not run_inference
     if key == ord('p'):
         print("Pruning bboxes to ", prune_num)
-        prune = not prune
+        prune = True#not prune
     if key == ord('o'):
         if prune_num == 1: prune_num = 2
         else: prune_num = 1

@@ -94,9 +94,9 @@ for image_path in IMAGE_PATHS:
           max_boxes_to_draw=200,
           min_score_thresh=.30,
           agnostic_mode=False)
+
     pil_detections = Image.fromarray(image_np_with_detections)
-    print(type(image_np_with_detections), type(pil_detections))
-    pil_detections.save(image_path.split('.')[0]+'anno'+'.jpg')
+    #pil_detections.save(image_path.split('.')[0]+'anno'+'.jpg')
 
     plt.figure()
     plt.imshow(image_np_with_detections)
