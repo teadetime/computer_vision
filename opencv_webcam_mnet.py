@@ -19,22 +19,29 @@ print(IMAGE_PATHS)
 PATH_TO_MODEL_DIR = "my_model_mnetv2"
 PATH_TO_LABELS = "my_model_mnetv2/label_map.pbtxt"
 PATH_TO_SAVED_MODEL = PATH_TO_MODEL_DIR + "/saved_model"
-
-cap = cv2.VideoCapture(0)
-print(cap.get(3), cap.get(4))
-
-# # Set to lower res
-# directory = pathlib.Path.cwd() / 'images'
-# print(directory)
-# models_dir = pathlib.Path.cwd() / 'models'
-
-im_width = 640
-im_height = 320
-cap.set(3,im_width)
-cap.set(4,im_height)
-
 run_inference = False
 prune = True
+save_video = False
+use_saved = False
+
+if not use_saved:
+    cap = cv2.VideoCapture(0)
+    print("Default image size")
+    print(cap.get(3), cap.get(4))
+    # # Set to lower res
+    im_width = 640
+    im_height = 480
+    cap.set(3, im_width)
+    cap.set(4, im_height)
+else:
+    # try playing a saved video
+    cap = cv2.VideoCapture('output.avi')
+    im_width = 640 #TODO: These are hardcoded
+    im_height = 480
+
+if save_video:
+    # Define the codec and create VideoWriter object
+    out = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 20.0, (im_width,im_height))
 prune_num = 2
 '''
 SETUP THE MODEL
@@ -52,15 +59,22 @@ category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABE
 '''
 Image capture loop!
 '''
+# used to record the time when we processed last frame
+prev_frame_time = 0
+
+# used to record the time at which we processed current frame
+new_frame_time = 0
+# font which we will be using to display FPS
+font = cv2.FONT_HERSHEY_SIMPLEX
 while(True):
     # Capture frame-by-frame
 
     ret, frame = cap.read()
-
+    if save_video:
+        out.write(frame)
     # Our operations on the frame come here
-    image = frame
-    image_for_model = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    # Display the resulting frame
+    image = cv2.flip(frame, 1)
+    image_for_model = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     if run_inference:
         # The input needs to be a tensor, convert it using `tf.convert_to_tensor`.
@@ -82,7 +96,6 @@ while(True):
         # detection_classes should be ints.
         detections['detection_classes'] = detections['detection_classes'].astype(np.int64)
 
-        image_copy = image.copy()
         if prune:
             selected_indices = tf.image.non_max_suppression(
                 detections['detection_boxes'], detections['detection_scores'], prune_num, .60)
@@ -93,7 +106,23 @@ while(True):
             selected_boxes = detections['detection_boxes']
             selected_classes = detections['detection_classes']
             selected_scores = detections['detection_scores']
+        # Pull out the bboxes before annotating!
+        # Time to process the boxes
+        bboxes = []
+        for num, box in enumerate(selected_boxes):
+            print(box)
+            if selected_scores[num] < .7:
+                cv2.destroyWindow('bbox_'+str(num))
+                continue
+            ymin = int(box[0] * im_height)
+            xmin = int(box[1] * im_width)
+            crop_h = int((box[2] - box[0]) * im_height)
+            crop_w = int((box[3] - box[1]) * im_width)
+            bbox = tf.image.crop_to_bounding_box(image,ymin,xmin, crop_h, crop_w).numpy()
+            bboxes.append(bbox)
+            cv2.imshow('bbox_'+str(num), bbox)
 
+        # Visulaize the bboxes
         viz_utils.visualize_boxes_and_labels_on_image_array(
             image,
             selected_boxes,
@@ -106,16 +135,16 @@ while(True):
             agnostic_mode=False)
 
 
-        # Time to process the boxes
-        for num, box in enumerate(selected_boxes):
-            print(box)
-            ymin = int(box[0] * im_height)
-            xmin = int(box[1] * im_width)
-            crop_h = int((box[2] - box[0]) * im_height)
-            crop_w = int((box[3] - box[1]) * im_width)
-            bbox = tf.image.crop_to_bounding_box(image,ymin,xmin, crop_h, crop_w).numpy()
-            cv2.imshow('bbox_'+str(num), bbox)
-    cv2.imshow('Inference',image)
+    # Calculating the fps
+    new_frame_time = time.time()
+    fps = 1 / (new_frame_time - prev_frame_time)
+    prev_frame_time = new_frame_time
+    # converting the fps into integer
+    fps = str(int(fps))
+    # puting the FPS count on the frame
+    cv2.putText(image, fps, (7, 70), font, 3, (100, 255, 0), 3, cv2.LINE_AA)
+    cv2.imshow('Inference', image)
+
 
     # Keyboard control
     key = cv2.waitKey(1) & 0xFF
@@ -134,4 +163,5 @@ while(True):
 
 # When everything done, release the capture
 cap.release()
+out.release()
 cv2.destroyAllWindows()
