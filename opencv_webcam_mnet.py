@@ -32,7 +32,8 @@ cap.set(3,640)
 cap.set(4,480)
 
 run_inference = False
-
+prune = True
+prune_num = 2
 '''
 SETUP THE MODEL
 '''
@@ -79,20 +80,30 @@ while(True):
         # detection_classes should be ints.
         detections['detection_classes'] = detections['detection_classes'].astype(np.int64)
 
-        #image_np_with_detections = image.copy()
+        image_copy = image.copy()
+        if prune:
+            selected_indices = tf.image.non_max_suppression(
+                detections['detection_boxes'], detections['detection_scores'], prune_num, .60)
+            selected_boxes = tf.gather(detections['detection_boxes'], selected_indices).numpy()
+            selected_classes = tf.gather(detections['detection_classes'], selected_indices).numpy()
+            selected_scores = tf.gather(detections['detection_scores'], selected_indices).numpy()
+        else:
+            selected_boxes = detections['detection_boxes']
+            selected_classes = detections['detection_classes']
+            selected_scores = detections['detection_scores']
 
         viz_utils.visualize_boxes_and_labels_on_image_array(
             image,
-            detections['detection_boxes'],
-            detections['detection_classes'],
-            detections['detection_scores'],
+            selected_boxes,
+            selected_classes,
+            selected_scores,
             category_index,
             use_normalized_coordinates=True,
             max_boxes_to_draw=200,
             min_score_thresh=.30,
             agnostic_mode=False)
 
-
+        # cv2.imshow('Inference_not_pruned', image_copy)
     cv2.imshow('Inference',image)
 
     # Keyboard control
@@ -100,17 +111,13 @@ while(True):
     if key == ord(' '):
         print("starting inference")
         run_inference = not run_inference
-    elif key == ord('p'):
-
-
-        predictions = model.predict(img_array)
-        print(predictions)
-        score = tf.nn.softmax(predictions[0])
-        print(
-            "This image most likely belongs to {} with a {:.2f} percent confidence."
-                .format(classes[np.argmax(score)], 100 * np.max(score))
-        )
-
+    if key == ord('p'):
+        print("Pruning bboxes to ", prune_num)
+        prune = not prune
+    if key == ord('o'):
+        if prune_num == 1: prune_num = 2
+        else: prune_num = 1
+        print("Pruning bboxes to: ", prune_num)
     elif key == ord('q'):
         break
 
