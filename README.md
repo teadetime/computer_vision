@@ -1,4 +1,47 @@
 # computer_vision
+# Schedule/Todo List
+- Documentation 
+  - Install TF directions (NATHAN)
+  - Resources used (BOTH)
+  - Code cleanup (BOTH)
+  - Make general outline of layout
+  - Choose place to upload model (NATHAN)
+- CV and ROS integration (NATHAN)
+- Post processing of BBOX over time for smooth results (NATHAN)
+  - larger bbox?
+  - Centroid same as previous frames
+- BBOX -> command (SANDER)
+  - DONE BBox Creation 
+  - IN PROGRESS Segmenting out the hand
+  - TODO Process Segmented hand to a command
+    - Finding fingertips
+    - Finding Anti-fingertips
+ -Extras
+   - Opencv play from video
+   - Test EfficientNet Model
+   - Train model longer
+   - Neato control based on xy coordinate of bbox or two hands?!
+
+## Wednesday
+- Sander segments hand from BBOX
+- Nathan to run cv in ros node
+
+## Thursday
+- Nathan runs model with cv/webcam in ros node
+
+## Friday
+
+## Saturday
+- Sander to finish output from bbox
+
+## Sunday
+
+## Monday
+- Class time/talk
+- MVP report minus visuals and some final touches
+
+
+
 
 
 
