@@ -13,7 +13,7 @@ There are many messy dependencies needed for this codebase to work.
 ## Install Directions
 __Pre-req:__
 
-Follow instructions (Comprobo ROS setup)[https://comprobo20.github.io/How%20to/setup_your_environment] to make sure your ros installation is correct
+Follow instructions [Comprobo ROS setup](https://comprobo20.github.io/How%20to/setup_your_environment) to make sure your ros installation is correct
 
 
 
