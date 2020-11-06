@@ -25,6 +25,24 @@ prune = True
 save_video = False
 use_saved = False
 
+
+def segmentHand(frame):
+    frameB = frame[:,:,0] 
+    frameG = frame[:,:,1] 
+    frameR = frame[:,:,2] 
+    ret, frameMaxMin = cv2.threshold(np.amax(frame, axis = 2)-np.amin(frame, axis = 2), 15,255, cv2.THRESH_BINARY) #>15
+    ret, frameRminusG = cv2.threshold(abs(frameR-frameG), 15,255, cv2.THRESH_BINARY)#>15
+    ret, frameRG = cv2.threshold(frameR - frameG, 0, 255, cv2.THRESH_BINARY)
+    ret, frameRB = cv2.threshold(frameR - frameB, 0, 255, cv2.THRESH_BINARY)
+    ret, frameGB = cv2.threshold(frameG - frameB, 0, 255, cv2.THRESH_BINARY)
+    ret, frameB = cv2.threshold(frameB, 20, 255, cv2.THRESH_BINARY) #>20
+    ret, frameG = cv2.threshold(frameG, 40, 255, cv2.THRESH_BINARY) #>40
+    ret, frameR = cv2.threshold(frameR, 95, 255, cv2.THRESH_BINARY) #>95
+    floatSum = ((frameMaxMin.astype(float) + frameRminusG.astype(float) +frameR+frameRG.astype(float) + frameRB.astype(float) + frameGB.astype(float) + frameMaxMin.astype(float) + frameRminusG.astype(float))/255).astype(np.uint8)
+    ret, frameFiltered = cv2.threshold(floatSum, 7, 8, cv2.THRESH_BINARY)
+    frameFiltered[frameFiltered>=8] = 255
+
+    return frameFiltered
 if not use_saved:
     cap = cv2.VideoCapture(0)
     print("Default image size")
@@ -121,7 +139,9 @@ while(True):
             crop_w = int((box[3] - box[1]) * im_width)
             bbox = tf.image.crop_to_bounding_box(image,ymin,xmin, crop_h, crop_w).numpy()
             bboxes.append(bbox)
-            cv2.imshow('bbox_'+str(num), bbox)
+            bboxFiltered = segmentHand(bbox)
+            cv2.imshow('bbox_'+str(num), bboxFiltered)
+            #cv2.imshow('bbox_'+str(num), bbox)
 
         # Visulaize the bboxes
         viz_utils.visualize_boxes_and_labels_on_image_array(
