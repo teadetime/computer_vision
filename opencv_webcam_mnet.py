@@ -27,18 +27,21 @@ use_saved = False
 
 
 def segmentHand(frame):
+    #Apply Color Thresholding to segment skin tones from backgrounds
     frameB = frame[:,:,0] 
     frameG = frame[:,:,1] 
     frameR = frame[:,:,2] 
+
+    #Uniform Day light Thresholds
     ret, frameMaxMin = cv2.threshold(np.amax(frame, axis = 2)-np.amin(frame, axis = 2), 15,255, cv2.THRESH_BINARY) #>15
     ret, frameRminusG = cv2.threshold(abs(frameR-frameG), 15,255, cv2.THRESH_BINARY)#>15
-    ret, frameRG = cv2.threshold(frameR - frameG, 0, 255, cv2.THRESH_BINARY)
-    ret, frameRB = cv2.threshold(frameR - frameB, 0, 255, cv2.THRESH_BINARY)
-    ret, frameGB = cv2.threshold(frameG - frameB, 0, 255, cv2.THRESH_BINARY)
-    ret, frameB = cv2.threshold(frameB, 20, 255, cv2.THRESH_BINARY) #>20
-    ret, frameG = cv2.threshold(frameG, 40, 255, cv2.THRESH_BINARY) #>40
-    ret, frameR = cv2.threshold(frameR, 95, 255, cv2.THRESH_BINARY) #>95
-    floatSum = ((frameMaxMin.astype(float) + frameRminusG.astype(float) +frameR+frameRG.astype(float) + frameRB.astype(float) + frameGB.astype(float) + frameMaxMin.astype(float) + frameRminusG.astype(float))/255).astype(np.uint8)
+    ret, frameRG = cv2.threshold(frameR - frameG, 0, 255, cv2.THRESH_BINARY) #R>G
+    ret, frameRB = cv2.threshold(frameR - frameB, 0, 255, cv2.THRESH_BINARY) #R>B
+    ret, frameGB = cv2.threshold(frameG - frameB, 0, 255, cv2.THRESH_BINARY) #G>B
+    ret, frameBfilt = cv2.threshold(frameB, 20, 255, cv2.THRESH_BINARY) #>20
+    ret, frameGfilt = cv2.threshold(frameG, 40, 255, cv2.THRESH_BINARY) #>40
+    ret, frameRfilt = cv2.threshold(frameR, 95, 255, cv2.THRESH_BINARY) #>95
+    floatSum = ((frameMaxMin.astype(float) + frameRminusG.astype(float) +frameRG.astype(float) + frameRB.astype(float) + frameGB.astype(float) + frameRfilt.astype(float) + frameGfilt.astype(float) + frameBfilt.astype(float))/255).astype(np.uint8)
     ret, frameFiltered = cv2.threshold(floatSum, 7, 8, cv2.THRESH_BINARY)
     frameFiltered[frameFiltered>=8] = 255
 
@@ -140,6 +143,18 @@ while(True):
             bbox = tf.image.crop_to_bounding_box(image,ymin,xmin, crop_h, crop_w).numpy()
             bboxes.append(bbox)
             bboxFiltered = segmentHand(bbox)
+            contours, hierarchy = cv2.findContours(bboxFiltered, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset=(xmin,ymin))
+            origFrame = cv2.flip(frame,1)
+            try:
+                contours = max(contours, key=lambda x: cv2.contourArea(x))
+                cv2.drawContours(origFrame, [contours], -1, (255,255,0), 2)
+                hull = cv2.convexHull(contours)
+                cv2.drawContours(origFrame, [hull], -1, (0, 255, 255), 2)
+            except ValueError:
+                pass
+            #print(np.shape(contours))
+           
+            cv2.imshow("contours", cv2.flip(origFrame,1))
             cv2.imshow('bbox_'+str(num), bboxFiltered)
             #cv2.imshow('bbox_'+str(num), bbox)
 
