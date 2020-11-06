@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import cv2
 import pathlib
 import os
@@ -15,7 +16,7 @@ from object_detection.utils import visualization_utils as viz_utils
 
 IMAGE_DIR = "images/another"
 IMAGE_PATHS = glob.glob(IMAGE_DIR+"/*")
-print(IMAGE_PATHS)
+
 PATH_TO_MODEL_DIR = "my_model_mnetv2"
 PATH_TO_LABELS = "my_model_mnetv2/label_map.pbtxt"
 PATH_TO_SAVED_MODEL = PATH_TO_MODEL_DIR + "/saved_model"
@@ -42,7 +43,7 @@ else:
 if save_video:
     # Define the codec and create VideoWriter object
     out = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 20.0, (im_width,im_height))
-prune_num = 2
+prune_num = 1
 '''
 SETUP THE MODEL
 '''
@@ -111,9 +112,9 @@ while(True):
         bboxes = []
         for num, box in enumerate(selected_boxes):
             print(box)
-            if selected_scores[num] < .7:
-                cv2.destroyWindow('bbox_'+str(num))
-                continue
+            # if selected_scores[num] < .7:
+            #     cv2.destroyWindow('bbox_'+str(num))
+            #     continue
             ymin = int(box[0] * im_height)
             xmin = int(box[1] * im_width)
             crop_h = int((box[2] - box[0]) * im_height)
