@@ -48,7 +48,8 @@ This process can be broken down into several different steps.
 
 #### Exporting the model
 - The final checkpoint from the model is stored in a format that allows it to be retrained from. This is a very large file format and not practicle if we simply wnat to use the model to perform inference.
-- We convert it into the tf.savedModel format using the command `$export_model` 
+- We convert it into the tf.savedModel format using the command `$ python3 exporter_main_v2.py --pipeline_config_path models/effnet/pipeline.config --trained_checkpoint_dir models/effnet/ --output_directory exported-models/my_effnet
+` 
 - This model is small enough to put onto github, [here is our mobilenetv2 hand detector](/my_model_mnetv2)
 
 #### Testing/Using the model
