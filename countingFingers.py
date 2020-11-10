@@ -2,6 +2,7 @@
 import cv2
 import numpy as np
 import scipy.cluster.hierarchy as hcluster
+
 def segmentHand(frame):
     #Apply Color Thresholding to segment skin tones from backgrounds
     frameB = frame[:,:,0] 
@@ -22,6 +23,26 @@ def segmentHand(frame):
     frameFiltered[frameFiltered>=8] = 255
 
     return frameFiltered
+
+def isFinger(pt1,pt2,pt3):
+    threshold = 60 #degree threshold
+
+    pt1 = np.asarray(pt1)
+    pt2 = np.asarray(pt2)
+    pt3 = np.asarray(pt3)
+    pt21 = pt1 - pt2
+    pt32 = pt3 - pt2
+
+    cosine_angle = np.dot(pt21, pt32) / (np.linalg.norm(pt21) * np.linalg.norm(pt32))
+    angle = np.arccos(cosine_angle)
+
+    if np.degrees(angle)<threshold:
+        return True
+    else:
+        return False
+
+
+
 src = cv2.imread(r'/home/sander/Documents/computer_vision/hand.jpg')
 scale_percent = 20
 
@@ -86,32 +107,30 @@ pointsAvg.append(pointsAvg[0])
 startPT.append(startPT[0])
 farPT.append(farPT[0])
 endPT.append(endPT[0])
-for i in range(len(pointsAvg)-1):
-    point = pointsAvg[i]
-    #cv2.circle(img,point,5,[255,0,255],-1)
-    #cv2.line(img,pointsAvg[i],pointsAvg[i+1],[255,0,0],2)
+
 avg = []
 for i in range(1,len(startPT)):
     startX = startPT[i][0]
     startY = startPT[i][1]
     endX = endPT[i-1][0]
     endY = endPT[i-1][1]
- 
     
     if np.linalg.norm(np.array(start)-np.array(far)) < 20:
         avgPT = tuple((round((startX+endX)/2),round((startY+endY)/2)))
         avg.append(avgPT)
+  
+numFingers = 0
+for i in range(len(avg)):
+    if isFinger(farPT[i],avg[i],farPT[i+1]):
+        cv2.circle(img,avg[i],10,[0,255,255],-1)
+        cv2.line(img,avg[i],farPT[i],[255,0,0],2)
+        cv2.line(img,avg[i],farPT[i+1],[255,0,0],2)
+        numFingers+=1
     else:
-        avg.append(startPT)
-        avg.append(endPT)
-        print('close')
-for j in range(len(avg)):
-    cv2.circle(img,avg[j],5,[0,255,255],-1)
-for i in range(len(farPT)):
-    cv2.circle(img,farPT[i],5,[0,0,255],-1)
-    #cv2.circle(img,endPT[i],5,[0,0,255],-1)
-    #cv2.line(img,avg[j],farPT[j],[255,0,0],2)
-    #cv2.line(img,avg[i-1],farPT[i],[255,0,0],2)
+        pass
+  
+print(numFingers)
+
     
 
 cv2.imshow('hand',img)
