@@ -13,12 +13,13 @@ import math
 warnings.filterwarnings('ignore')   # Suppress Matplotlib warnings
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as viz_utils
+import scipy.cluster.hierarchy as hcluster
 
 IMAGE_DIR = "images/another"
 IMAGE_PATHS = glob.glob(IMAGE_DIR+"/*")
 
-PATH_TO_MODEL_DIR = "/home/nathan/catkin_ws/src/computer_vision/my_model_mnetv2"
-PATH_TO_LABELS = "/home/nathan/catkin_ws/src/computer_vision/my_model_mnetv2/label_map.pbtxt"
+PATH_TO_MODEL_DIR = "../computer_vision/my_model_mnetv2"
+PATH_TO_LABELS = "../computer_vision/my_model_mnetv2/label_map.pbtxt"
 PATH_TO_SAVED_MODEL = PATH_TO_MODEL_DIR + "/saved_model"
 run_inference = False
 prune = True
@@ -47,6 +48,73 @@ def segmentHand(frame):
     frameFiltered[frameFiltered>=8] = 255
 
     return frameFiltered
+
+def isFinger(pt1,pt2,pt3):
+    threshold = 60 #degree threshold
+
+    pt1 = np.asarray(pt1)
+    pt2 = np.asarray(pt2)
+    pt3 = np.asarray(pt3)
+    pt21 = pt1 - pt2
+    pt32 = pt3 - pt2
+
+    cosine_angle = np.dot(pt21, pt32) / (np.linalg.norm(pt21) * np.linalg.norm(pt32))
+    angle = np.arccos(cosine_angle)
+
+    if np.degrees(angle)<threshold:
+        return True
+    else:
+        return False
+
+
+def handSkeleton(img,imgFilt):
+    contours, hierarchy = cv2.findContours(imgFilt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE )
+    contours = max(contours, key=lambda x: cv2.contourArea(x))
+    cv2.drawContours(img, [contours], -1, (255,255,0), 2)
+    hull = cv2.convexHull(contours,returnPoints=False)
+    try:
+        defects = cv2.convexityDefects(contours,hull,False)
+        points = []
+        pointsX = []
+        pointsY = []
+        startPT = []
+        endPT = []
+        farPT = []
+        for i in range(defects.shape[0]):
+            s,e,f,d = defects[i,0]
+            start = tuple(contours[s][0])
+            end = tuple(contours[e][0])
+            far = tuple(contours[f][0])
+            points.extend([start,end,far])
+            pointsX.extend([start[0],end[0],far[0]])
+            pointsY.extend([start[1],end[1],far[1]])
+            if np.linalg.norm(np.array(start)-np.array(far)) > 10: #40
+                startPT.append(start)
+                farPT.append(far)
+                endPT.append(end)
+
+        clusters = hcluster.fclusterdata(points, 20, criterion="distance") #20 Threshold hardcoded
+        
+        startPT.append(startPT[0])
+        farPT.append(farPT[0])
+        endPT.append(endPT[0])
+
+        avg = []
+        for i in range(1,len(startPT)):
+            startX = startPT[i][0]
+            startY = startPT[i][1]
+            endX = endPT[i-1][0]
+            endY = endPT[i-1][1]
+            
+            if np.linalg.norm(np.array(start)-np.array(far)) < 20:
+                avgPT = tuple((round((startX+endX)/2),round((startY+endY)/2)))
+                avg.append(avgPT)
+        
+        return avg, farPT, img
+
+    except:
+        pass
+
 if not use_saved:
     cap = cv2.VideoCapture(0)
     print("Default image size")
@@ -214,6 +282,24 @@ while(True):
             bbox = tf.image.crop_to_bounding_box(image,ymin,xmin, crop_h_inc, crop_w_inc).numpy()
             bboxes.append(bbox)
             bboxFiltered = segmentHand(bbox)
+            try:
+                avg, farPT, img = handSkeleton(bbox, bboxFiltered)
+
+                numFingers = 0
+                for i in range(len(avg)):
+                    if isFinger(farPT[i],avg[i],farPT[i+1]):
+                        cv2.circle(img,avg[i],10,[0,255,255],-1)
+                        cv2.line(img,avg[i],farPT[i],[255,0,0],2)
+                        cv2.line(img,avg[i],farPT[i+1],[255,0,0],2)
+                        numFingers+=1
+                    else:
+                        print("No")
+                        pass
+
+                cv2.putText(image, str(numFingers), (7, 200), font, 3, (100, 255, 0), 3, cv2.LINE_AA)
+            except:
+                pass
+            '''
             contours, hierarchy = cv2.findContours(bboxFiltered, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset=(xmin,ymin))
             origFrame = cv2.flip(frame,1)
             try:
@@ -223,9 +309,11 @@ while(True):
                 cv2.drawContours(origFrame, [hull], -1, (0, 255, 255), 2)
             except ValueError:
                 pass
-
+            
             cv2.imshow("contours", cv2.flip(origFrame,1))
+            '''
             cv2.imshow('bbox_'+str(1), bboxFiltered)
+            cv2.imshow('bbox', bbox)
 
             # Visulaize the bboxes
             viz_utils.visualize_boxes_and_labels_on_image_array(
