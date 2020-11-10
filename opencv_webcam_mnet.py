@@ -162,6 +162,11 @@ while(True):
         crop_w_inc = int(min(max_w, crop_w_inc))
         crop_h_inc = int(min(max_h, crop_h_inc))
 
+        new_selected_boxes = np.copy(selected_boxes)
+        new_selected_boxes[0][0] = ymin/im_height
+        new_selected_boxes[0][1] = xmin/im_width
+        new_selected_boxes[0][2] = (ymin+crop_h_inc) /im_height
+        new_selected_boxes[0][3] = (xmin+crop_w_inc) /im_width
         # Write info about box into the past frames
         info_dict = {"bbox":hand, "cent_x":center_x, "cent_y":center_y, "score":selected_scores[0]}
 
@@ -226,6 +231,16 @@ while(True):
             viz_utils.visualize_boxes_and_labels_on_image_array(
                 image,
                 selected_boxes,
+                selected_classes,
+                selected_scores,
+                category_index,
+                use_normalized_coordinates=True,
+                max_boxes_to_draw=200,
+                min_score_thresh=.50,
+                agnostic_mode=False)
+            viz_utils.visualize_boxes_and_labels_on_image_array(
+                image,
+                new_selected_boxes,
                 selected_classes,
                 selected_scores,
                 category_index,

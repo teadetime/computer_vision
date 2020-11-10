@@ -10,6 +10,7 @@ import select
 import sys
 import termios
 import cv2
+import math
 import pathlib
 import os
 from tensorflow import keras
@@ -65,7 +66,7 @@ def segmentHand(frame):
 
 class tele(object):
     def __init__(self):
-        rospy.init_node('tele_vision')
+        rospy.init_node('hand_ctrl')
         # rospy.Subscriber('/bump', Int8MultiArray, self.process_bump)
         self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
         self.desired_vel = 0.0
@@ -92,6 +93,9 @@ class tele(object):
         prune_num = 1
         save_video = False
         use_saved = False
+        past_frames = []
+        avg_bbox_scores = []
+        num_past_frames = 30
         # used to record the time when we processed last frame
         prev_frame_time = 0
         # used to record the time at which we processed current frame
@@ -143,29 +147,92 @@ class tele(object):
                 # detection_classes should be ints.
                 detections['detection_classes'] = detections['detection_classes'].astype(np.int64)
 
-                if prune:
-                    selected_indices = tf.image.non_max_suppression(
-                        detections['detection_boxes'], detections['detection_scores'], prune_num, .60)
-                    selected_boxes = tf.gather(detections['detection_boxes'], selected_indices).numpy()
-                    selected_classes = tf.gather(detections['detection_classes'], selected_indices).numpy()
-                    selected_scores = tf.gather(detections['detection_scores'], selected_indices).numpy()
-                else:
-                    selected_boxes = detections['detection_boxes']
-                    selected_classes = detections['detection_classes']
-                    selected_scores = detections['detection_scores']
+                selected_indices = tf.image.non_max_suppression(
+                    detections['detection_boxes'], detections['detection_scores'], 1,
+                    .60)  # FORCE PRUNE TO 1 with >60% confidence
+                selected_boxes = tf.gather(detections['detection_boxes'], selected_indices).numpy()
+                selected_classes = tf.gather(detections['detection_classes'], selected_indices).numpy()
+                selected_scores = tf.gather(detections['detection_scores'], selected_indices).numpy()
                 # Pull out the bboxes before annotating!
                 # Time to process the boxes
                 bboxes = []
-                for num, box in enumerate(selected_boxes):
-                    print(box)
-                    # if selected_scores[num] < .7:
-                    #     cv2.destroyWindow('bbox_'+str(num))
-                    #     continue
-                    ymin = int(box[0] * im_height)
-                    xmin = int(box[1] * im_width)
-                    crop_h = int((box[2] - box[0]) * im_height)
-                    crop_w = int((box[3] - box[1]) * im_width)
-                    bbox = tf.image.crop_to_bounding_box(image, ymin, xmin, crop_h, crop_w).numpy()
+                # ONLY MESS WITH ONE BOX
+
+                bbox_score = 0  # Add score to see if the bbox matches well with past bboxes)
+                hand = selected_boxes[0]
+                size_increase = .1  # Increase bbox 10% of the width and height
+
+                ymin = int(hand[0] * im_height)
+                xmin = int(hand[1] * im_width)
+                crop_h = int((hand[2] - hand[0]) * im_height)
+                crop_w = int((hand[3] - hand[1]) * im_width)
+                center_x = (xmin + crop_w / 2) / im_width
+                center_y = (ymin + crop_h / 2) / im_height
+
+                # FIND THE ADJUSTMENT AMOUNT!
+                add_w = size_increase * crop_w
+                add_h = size_increase * crop_h
+
+                # Apply new adjustments while keeping the box centered
+                ymin -= add_h
+                xmin -= add_w
+                crop_w_inc = crop_w + 2 * add_w
+                crop_h_inc = crop_h + 2 * add_h
+
+                # Trim the values to the image!
+                ymin = int(max(0, ymin))
+                xmin = int(max(0, xmin))
+                max_w = im_width - xmin
+                max_h = im_height - ymin
+                crop_w_inc = int(min(max_w, crop_w_inc))
+                crop_h_inc = int(min(max_h, crop_h_inc))
+
+                # Write info about box into the past frames
+                info_dict = {"bbox": hand, "cent_x": center_x, "cent_y": center_y, "score": selected_scores[0]}
+
+                # Generate scores to determine if this is a jumpy box or a good one
+                area = (crop_h / im_height) * (
+                            crop_w / im_width) / .45  # arbitrary scaling so that we are looking for big hands!
+                area_score = area  # COuld apply another function here
+                ml_score = 2 * float(info_dict["score"]) ** 3
+
+                # Look through past frames and see how good of a match you have
+                if not past_frames:
+                    # First run or missing frames
+                    bbox_score = 0
+                else:
+                    for frme in past_frames:
+                        # Check to see if the center or xy is close
+                        x_off = abs(frme["cent_x"] - info_dict["cent_x"])
+                        y_off = abs(frme["cent_y"] - info_dict["cent_y"])
+                        x_score = 1 / math.e ** (x_off ** (1 / 3))
+                        y_score = 1 / math.e ** (y_off ** (1 / 3))
+                        frame_score = x_score + y_score + area_score + ml_score  # Max should be around 5
+                        bbox_score += frame_score
+                # Print score output so that we can see how it fluctuates
+                cv2.putText(image, str(int(bbox_score)), (7, 170), font, 3, (120, 205, 40), 3, cv2.LINE_AA)
+                # Add frame to past frames
+                past_frames.append(info_dict)
+                avg_bbox_scores.append(bbox_score)
+                # Look at the average bbox score of the past frames
+                if not avg_bbox_scores:
+                    avg_bbox = 0
+                else:
+                    avg_bbox = sum(avg_bbox_scores) / len(avg_bbox_scores)
+                # If the bbox is very different from the average then it is a jumpy frame
+                good_box = True
+                if bbox_score < avg_bbox * .9 or info_dict["score"] < .5:
+                    # Not a great match
+                    print('THis frame isnt stable yet!!')
+                    good_box = False
+                else:
+                    print("GOOD FRAME")
+
+                # Only Process bboxes etc id the box is good
+                if good_box:
+                    # CROP THE BOUNDING BOX
+                    # print(ymin, xmin, crop_h, crop_w)
+                    bbox = tf.image.crop_to_bounding_box(image, ymin, xmin, crop_h_inc, crop_w_inc).numpy()
                     bboxes.append(bbox)
                     bboxFiltered = segmentHand(bbox)
                     contours, hierarchy = cv2.findContours(bboxFiltered, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE,
@@ -178,24 +245,25 @@ class tele(object):
                         cv2.drawContours(origFrame, [hull], -1, (0, 255, 255), 2)
                     except ValueError:
                         pass
-                    # print(np.shape(contours))
 
                     cv2.imshow("contours", cv2.flip(origFrame, 1))
-                    cv2.imshow('bbox_' + str(num), bboxFiltered)
-                    # cv2.imshow('bbox_'+str(num), bbox)
+                    cv2.imshow('bbox_' + str(1), bboxFiltered)
 
-                # Visulaize the bboxes
-                viz_utils.visualize_boxes_and_labels_on_image_array(
-                    image,
-                    selected_boxes,
-                    selected_classes,
-                    selected_scores,
-                    category_index,
-                    use_normalized_coordinates=True,
-                    max_boxes_to_draw=200,
-                    min_score_thresh=.50,
-                    agnostic_mode=False)
-
+                    # Visulaize the bboxes
+                    viz_utils.visualize_boxes_and_labels_on_image_array(
+                        image,
+                        selected_boxes,
+                        selected_classes,
+                        selected_scores,
+                        category_index,
+                        use_normalized_coordinates=True,
+                        max_boxes_to_draw=200,
+                        min_score_thresh=.50,
+                        agnostic_mode=False)
+                # Remove the first entry of the past frames and scores as long as they aren't empty
+                if len(past_frames) > num_past_frames:
+                    del past_frames[0]
+                    del avg_bbox_scores[0]
             # Calculating the fps
             new_frame_time = time.time()
             fps = 1 / (new_frame_time - prev_frame_time)
