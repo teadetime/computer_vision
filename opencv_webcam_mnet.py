@@ -296,7 +296,7 @@ while(True):
                         print("No")
                         pass
 
-                cv2.putText(image, str(numFingers), (7, 200), font, 3, (100, 255, 0), 3, cv2.LINE_AA)
+                cv2.putText(image, str(numFingers), (7, 400), font, 3, (100, 255, 0), 3, cv2.LINE_AA)
             except:
                 pass
             '''
