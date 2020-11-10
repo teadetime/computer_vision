@@ -124,7 +124,7 @@ while(True):
 
 
         selected_indices = tf.image.non_max_suppression(
-            detections['detection_boxes'], detections['detection_scores'], 1, .60) # FORCE PRUNE TO 1
+            detections['detection_boxes'], detections['detection_scores'], 1, .60) # FORCE PRUNE TO 1 with >60% confidence
         selected_boxes = tf.gather(detections['detection_boxes'], selected_indices).numpy()
         selected_classes = tf.gather(detections['detection_classes'], selected_indices).numpy()
         selected_scores = tf.gather(detections['detection_scores'], selected_indices).numpy()
@@ -135,19 +135,38 @@ while(True):
 
         bbox_score = 0  # Add score to see if the bbox matches well with past bboxes)
         hand = selected_boxes[0]
+        size_increase = .1 # Increase bbox 10% of the width and height
 
         ymin = int(hand[0] * im_height)
         xmin = int(hand[1] * im_width)
         crop_h = int((hand[2] - hand[0]) * im_height)
         crop_w = int((hand[3] - hand[1]) * im_width)
-        center_x = (xmin + crop_w/2) / im_width
-        center_y = (ymin + crop_h/2) / im_height
+        center_x = (xmin + crop_w / 2) / im_width
+        center_y = (ymin + crop_h / 2) / im_height
+
+        # FIND THE ADJUSTMENT AMOUNT!
+        add_w = size_increase * crop_w
+        add_h = size_increase * crop_h
+
+        # Apply new adjustments while keeping the box centered
+        ymin -= add_h
+        xmin -= add_w
+        crop_w_inc = crop_w + 2 * add_w
+        crop_h_inc = crop_h + 2 * add_h
+
+        # Trim the values to the image!
+        ymin = int(max(0,ymin))
+        xmin = int(max(0, xmin))
+        max_w = im_width-xmin
+        max_h = im_height-ymin
+        crop_w_inc = int(min(max_w, crop_w_inc))
+        crop_h_inc = int(min(max_h, crop_h_inc))
 
         # Write info about box into the past frames
         info_dict = {"bbox":hand, "cent_x":center_x, "cent_y":center_y, "score":selected_scores[0]}
 
         # Generate scores to determine if this is a jumpy box or a good one
-        area = (crop_h/im_height) * (crop_w/im_width) / .25  # arbitrary scaling so that we are looking for big hands!
+        area = (crop_h/im_height) * (crop_w/im_width) / .45  # arbitrary scaling so that we are looking for big hands!
         area_score = area  # COuld apply another function here
         ml_score = 2 * float(info_dict["score"]) ** 3
 
@@ -186,7 +205,8 @@ while(True):
         # Only Process bboxes etc id the box is good
         if good_box:
             # CROP THE BOUNDING BOX
-            bbox = tf.image.crop_to_bounding_box(image,ymin,xmin, crop_h, crop_w).numpy()
+            # print(ymin, xmin, crop_h, crop_w)
+            bbox = tf.image.crop_to_bounding_box(image,ymin,xmin, crop_h_inc, crop_w_inc).numpy()
             bboxes.append(bbox)
             bboxFiltered = segmentHand(bbox)
             contours, hierarchy = cv2.findContours(bboxFiltered, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset=(xmin,ymin))
@@ -245,5 +265,5 @@ while(True):
 
 # When everything done, release the capture
 cap.release()
-out.release()
+# out.release()
 cv2.destroyAllWindows()
