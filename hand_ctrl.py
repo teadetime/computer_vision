@@ -156,6 +156,7 @@ class tele(object):
                 # Pull out the bboxes before annotating!
                 # Time to process the boxes
                 bboxes = []
+                last_good_box = None
                 # ONLY MESS WITH ONE BOX
 
                 bbox_score = 0  # Add score to see if the bbox matches well with past bboxes)
@@ -230,10 +231,11 @@ class tele(object):
 
                 # Only Process bboxes etc id the box is good
                 if good_box:
+                    # Save the last good box so that it can be used
                     # CROP THE BOUNDING BOX
                     # print(ymin, xmin, crop_h, crop_w)
                     bbox = tf.image.crop_to_bounding_box(image, ymin, xmin, crop_h_inc, crop_w_inc).numpy()
-                    bboxes.append(bbox)
+                    last_good_box = {"bbox": hand, "cent_x": center_x, "cent_y": center_y, "score": selected_scores[0], "image":bbox}
                     bboxFiltered = segmentHand(bbox)
                     contours, hierarchy = cv2.findContours(bboxFiltered, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE,
                                                            offset=(xmin, ymin))
@@ -260,6 +262,22 @@ class tele(object):
                         max_boxes_to_draw=200,
                         min_score_thresh=.50,
                         agnostic_mode=False)
+                else:
+                    # Use the last good box
+                    #last_good_box
+                    #process_box = last_good_box
+                    pass
+
+                # Process the xy position
+                if last_good_box:
+                    # Subtract .5 so that the range is from 0-1
+                    x_pos = -last_good_box["cent_x"]+.5
+                    y_pos = -last_good_box["cent_y"]+.5
+
+                else:
+                    x_pos = 0
+                    y_pos = 0
+
                 # Remove the first entry of the past frames and scores as long as they aren't empty
                 if len(past_frames) > num_past_frames:
                     del past_frames[0]
@@ -279,18 +297,17 @@ class tele(object):
             if key == ord(' '):
                 print("starting inference")
                 run_inference = not run_inference
-            if key == ord('p'):
-                print("Pruning bboxes to ", prune_num)
-                prune = True  # not prune
-            if key == ord('o'):
-                if prune_num == 1:
-                    prune_num = 2
-                else:
-                    prune_num = 1
-                print("Pruning bboxes to: ", prune_num)
             elif key == ord('q'):
                 break
+            """
+            PROCESS THE MODEL INPUTS!!!!!
+            """
 
+            ## Simple XY COntrol
+            # X translation controls angular velocity, Y position controls linear
+
+            print("SENDING: ", x_pos, y_pos)
+            self.pub.publish(Twist(linear=Vector3(x=y_pos), angular=Vector3(z=x_pos)))
 
 
 
@@ -309,7 +326,7 @@ class tele(object):
         #         self.angular_vel -= .1
         #     elif key == "D":
         #         self.angular_vel += .1
-        self.pub.publish(Twist(linear=Vector3(x=0), angular=Vector3(z=0)))
+
 
 
 if __name__ == '__main__':
