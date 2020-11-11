@@ -119,7 +119,7 @@ frame_score = x_score+y_score+area_score+ml_score # Max should be around 5
 There is also post processing done on the neato side of things to help ensure continuity of commands being sent to the robot.
 
 Once the bounding box has been read and the hand pose has been determined the neato waits for multiple of the same signal before doing anything. Our current implementation allows a finger count/gesture to be acted upon if it is in 7 of the last 10 frames.
-- This helps to alleviate a very sporadic/jump behavior
+- This added redundancy helps to alleviate very sporadic/jumpy behavior
 - This comes at a price of reaction time as it will take longer(ie more processed frames) for a given action/hand pose to enact a change and stop
 - On a higher power system there would be less slowdown (higher frame rate) and it would likely perform better
 
@@ -127,12 +127,13 @@ Once the bounding box has been read and the hand pose has been determined the ne
 ## Final Results
 Our final implementation sports 2 different control styles. One style simply uses the location of a hand in the frame to control the linear and angular velocity of the neato. This is quite fun to control and is fairly intuitive.
 
-Our intended control method uses the number of fingers showing to start different behaviours. This is much harder to implement and depends significantly on the quality of the bounding box made by the object detection model. While this may seem like a less complicated control method than the above control style it is significantly more complicated. Also keep in mind that the position of the hand in the frame is still being calculated. It would be trivial to have certain numbers of fingers do different things in different parts of the frame!
+Our intended control method uses the number of fingers showing to start different behaviours. This is much harder to implement and depends significantly on the quality of the bounding box made by the object detection model, as well as the environmental lighting's effects on color thresholding. While this may seem like a less complicated control method than the above control style it is significantly more complicated. Also keep in mind that the position of the hand in the frame is still being calculated. It would be trivial to have certain numbers of fingers do different things in different parts of the frame!
 
 ## Notable Challenges/Roadblocks
 As expected, this project had its fair share of difficulties. These are summarised below:
 - TensorFlow 2 object detection installation across multiple systems was finicky. Graphics drivers were even more of a mess
 - Lighting for ML object detection model changes how well it is able to predict. This task would likely have benefit from creating a small amount of our own training data
+- Lighting also proved troublesome for segmentation of the hand. Small changes in light would lead to vast changes in the deteced hand shape.
 - Bounding boxes are all different sizes and there are a large amount of “noisy” predictions. (Our smoothing efforts work to alleviate some of this)
 - Bounding boxes often chop off fingers (We increase the box size by 10% on all detections in each direction). This helps make sure that we have the full hand to look for fingers in. See the below gif where there is an incrased bounding box. ![larger box](/docs/images/Increased%20box%20size.gif)
 - Unfortunately OpenCV doesn’t have simple ways of playing back recorded video at recorded speed. It is more geared towards processing through frames. This meant that we had to test things in real time which led to inconsistent/reproducible tests, and a larger amount of time.
@@ -142,7 +143,7 @@ As expected, this project had its fair share of difficulties. These are summaris
 In almost any views, this is a very rudimentary start to the problem of “gesture” or “hand” control. However, our experimentation led us to understand more of the problem and how it may be more accurately addressed. To improve upon our work we feel that the following ideas show promise or are worth exploring:
 - A single Machine learning model to get hand pose detection (https://ai.googleblog.com/2019/08/on-device-real-time-hand-tracking-with.html). This would simplify the process to potentially be less affected by lighting conditions.
 - Adjust for lighting and contrast to improve model and masking
-- use a segmenting machine learning model rather than object detection and homebrewed masking. This would improve speed and likely quality
+- Use a segmenting machine learning model rather than object detection and homebrewed masking. This would improve speed and likely quality
 - Supplement training data with data specific to the task. In our case making a few frames of our hands in the orientations we were interested in would likely really help our object detection model.
 - Use an ML model to determine appropriate masking parameters for hand colors
 - Experiment with training a full frame image classifier. Implementation would be simple and it could potentially provide simple gesture indication without the location and size parts that are gained from doing object detection. This would also eliminate other processing needed to determine hand gesture after localizing it with our current model.
