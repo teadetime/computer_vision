@@ -93,7 +93,7 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
     try:
         #Generate convexity defects based on convex hull
         defects = cv2.convexityDefects(contours,hull,False)
-        cv2.putText(image, "GOOD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
+        cv2.putText(img, "GOOD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
         #Create lists of starting, ending and far points of convexity defects
         points = []
         startPT = []
@@ -127,7 +127,7 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
                 avgPT = tuple((round((startX+endX)/2),round((startY+endY)/2)))
                 avg.append(avgPT)
         if len(avgPT) ==0:
-            cv2.putText(image, "BAD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
+            cv2.putText(img, "BAD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
         return avg, farPT, img
 
     except:
@@ -301,7 +301,7 @@ while(True):
             bboxes.append(bbox)
             bboxFiltered = segmentHand(bbox)
             try:
-                avg, farPT, img = handSkeleton(image, bboxFiltered, xmin, ymin)
+                avg, farPT, image = handSkeleton(image, bboxFiltered, xmin, ymin)
                 numFingers = 0
                 for i in range(len(avg)):
                     if isFinger(farPT[i],avg[i],farPT[i+1]):
