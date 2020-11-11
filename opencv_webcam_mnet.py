@@ -314,7 +314,7 @@ while(True):
             numFingers = 0
 
             try:
-
+                #Get number of fingers and fingertip annotations
                 numFingers, image = getFingertips(image, bboxFiltered, xmin, ymin)
 
             except:
