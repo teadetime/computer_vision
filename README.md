@@ -69,10 +69,10 @@ We initially tried to loop through each pixel of each frame but that was very sl
 Once the binary mask has been created we can use the OpenCV's `findContours()` function to create a contour outlining the pixels belonging to the hand. 
 <p align="center">
 <img width="394" height="525" src="/docs/images/hand_contours.png">
-  
+After creating the contour, we used OpenCV's `convexHull()` function to create a convex polygon consisting of the outter most edges of the contour. 
 <p align="center">
 <img width="394" height="525" src="/docs/images/hand_convexhull.png">
-  
+Next, we used OpenCV's `convexityDefects()` function to identify major concavities within the convex hull. These areas are shown with the red dots in the image below.
   <p align="center">
 <img width="394" height="525" src="/docs/images/hand_defects.png">
 
