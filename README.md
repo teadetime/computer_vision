@@ -73,8 +73,7 @@ Once the binary mask has been created we can use the OpenCV's `findContours()` f
 <p align="center">
 <img width="394" height="525" src="/docs/images/hand_convexhull.png">
   
-  <p align="center">
-<img width="394" height="525" src="/docs/images/hand_defects.png">
+
 
 
 
