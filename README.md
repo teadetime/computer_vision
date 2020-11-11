@@ -55,7 +55,7 @@ This process can be broken down into several different steps.
 Here is the first run of the Mobilenetv2 320x320 custom model
 ![The model](/docs/images/object%20detection.gif)
 
-## OpenCV implementation and finger counting
+## OpenCV implementation and Finger Counting
 ### Hand Segmentation/Masking
 After the hand has been localized within the image using our TensorFlow model, we use pixel-wise segmentation to isolate the hand from background pixels within the bounding box. We accomplished this through color thresholding, using parameters described by N. Dwina et al. These parameters are listed below in the RGB color space. 
 
