@@ -93,6 +93,7 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
     hull = cv2.convexHull(contours,returnPoints=False)
     
     
+    
     #Generate convexity defects based on convex hull
     defects = cv2.convexityDefects(contours,hull,False)
     cv2.putText(img, "GOOD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
@@ -130,7 +131,7 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
             endX = endPT[i-1][0]
             endY = endPT[i-1][1]
             
-            if np.linalg.norm(np.array(start)-np.array(far)) < 20:
+            if np.linalg.norm(np.array(start)-np.array(end)) < 20:
                 avgPT = tuple((round((startX+endX)/2),round((startY+endY)/2)))
                 avg.append(avgPT)
 
