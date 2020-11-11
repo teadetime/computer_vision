@@ -30,7 +30,7 @@ Num Fingers | Command
 Developing the ML object detection model can be broken down into multiple steps.
 For even more detail of the process to create this model please look [at our other documentation](/docs/model_dev.md)
 #### Preliminary Decisions
-- We chose to use the Tensorflow Object Detection API. This was chosen over PyTorch because of our prior experience with it.
+- We chose to use the Tensorflow Object Detection API. This was chosen because of our prior experience with it.
 - Inputs would be webcam data in real time
 - Interested in hand orientation/pose
 
@@ -43,24 +43,24 @@ It also became evident that we were not interested in pouring tons of time into 
 This led to a pivot to an object detection model. We were very interested in the repo here: [github.com/victordibia/handtracking](https://github.com/victordibia/handtracking)
 We planned to port this code over to the upgraded/new TF2 object detection API. This project also made use of a labeled dataset: [Egohands](vision.soic.indiana.edu/projects/egohands/)
 
-This dataset and paper gave us confidence that we could train a model that would recognize hands and allow us to select a bounding box around them.
-This bounding box will then be cropped out and passed on to more image processing to determine the pose/shape of the hand
+This dataset and paper gave us confidence that we could train a model that would recognize hands and allow us to generate a bounding box around them.
+This bounding box will then be cropped and passed on to more image processing to determine the pose/shape of the hand
 
 
 #### Development Phase (Object Detection)
 This process can be broken down into several different steps.
 ##### Obtaining Training Data
-- The above [Egohands](vision.soic.indiana.edu/projects/egohands/) dataset is publicly available. This contains a set of all the images and annotations. These annotations are bbox level annotations and split into 4 different classes.
+- The above [Egohands](vision.soic.indiana.edu/projects/egohands/) dataset is publicly available. TIt contains a set of all the images and annotations. These annotations are bounding box level annotations and split into 4 different classes.
 
 ##### Converting Training Data/labels
 - The annotations are saved into a format that can't be read by the tensorflow dataset creators.
 - Modifying scripts from [github.com/victordibia/handtracking](https://github.com/victordibia/handtracking) took the processing from .m files to .xml to .csv which can be read by tensorflow scripts.
-- The images and .csvs are converted together in to TFRecords (.record). There is a train.record and test.record to reflect the training and validation image sets. TFRecords are the final format used in training.
+- The images and .csv files are converted together in to TFRecords (.record). There is a train.record and test.record to reflect the training and validation image sets. TFRecords are the final format used in training.
 
-##### Choosing a Model to Transfer Learn off of
-- Tensorflow had a [model zoo](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/tf2_detection_zoo.md) containing models that are suitable to fine tune for object detection tasks.
+##### Choosing a Model for Transfer Learning
+- Tensorflow has a [model zoo](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/tf2_detection_zoo.md) containing models that are suitable to fine tune for object detection tasks.
 - We had experience with mobilenetv2, and thought that the 320x320 size would be sufficient for our webcam and would be trainable on our hardware (GTX 1060 6gb)
-- We also trained a model on EfficientNet 320x320. his model showed similar results of accuracy but took much longer to train and was too slow at performing inference to be effective in real time on CPU-only machine (one of our requirements)
+- We also trained a model on EfficientNet 320x320. This model showed similar accuracy results, but took much longer to train and was too slow at performing inference to be effective in real time on a CPU-only machine (one of our requirements)
 ##### The model at work!
 Here is the first run of the Mobilenetv2 320x320 custom model
 ![The model](/docs/images/object%20detection.gif)
@@ -71,7 +71,7 @@ After the hand has been localized within the image using our TensorFlow model, w
 <p align="center">
  <img src="/docs/images/thresholdParams.jpg">
 
-We initially tried to loop through each pixel of each frame but that was very slow, giving us very few frames per second. In order to speed up the thresholding process we did the thresholding in layers. Each parameter above was it's own layer. Pixels that fulfilled the constraint were given a value of 255, while pixels that did not meet the criteria were given a value a zero. Then, all 8 layers were added together and normalized to a scale between 0 and 8 based on the number of thresholds each pixel met. Any pixel that met all 8 criteria was given a value of 255, while everything else was set to 0. This strategy proved much more computationally efficient. Finally, we made use of OpenCV's `erode()` and `dilate()` functions in order to clean some of the noise.
+We initially tried to loop through each pixel of each frame but that was very slow, giving us very few frames per second. In order to speed up the thresholding process we did the thresholding in layers. A new layer was created for each parameter above. Pixels that fulfilled the constraint were given a value of 255, while pixels that did not meet the criteria were given a value a zero. Then, all 8 layers were added together and normalized to a scale between 0 and 8 based on the number of thresholds each pixel met. Any pixel that met all 8 criteria was given a value of 255, while everything else was set to 0. This strategy proved much more computationally efficient. Finally, we made use of OpenCV's `erode()` and `dilate()` functions to clean some of the noise in our newly created binary mask.
 
 ![Hand Segmentation Example](/docs/images/segmentation.jpg)
 
@@ -79,7 +79,7 @@ We initially tried to loop through each pixel of each frame but that was very sl
 <p align="center">
 <img width="1182" height="435" src="/docs/images/threeHandsLabelled.jpg">
   
-The three tools we need in order to be able to identify and count the number of fingers being held up are contours, convex hulls and convexity defects.
+The three tools we need in order to be able to identify and count the number of fingers being held up are contours, convex hulls, and convexity defects.
 Once the binary mask has been created we can use OpenCV's `findContours()` function to create a contour outlining the pixels belonging to the hand. After creating the contour, we used OpenCV's `convexHull()` function to create a convex polygon consisting of the outermost edges of the contour. Next, we used OpenCV's `convexityDefects()` function to identify major concavities within the convex hull.
 
 ### Identifying and Counting Fingers
