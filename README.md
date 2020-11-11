@@ -16,6 +16,7 @@ The first shown above uses the location of the hand within the image to control 
 
   <img width="1208" height="525" src="/docs/images/fingerDriving.gif">
 The second control framework consists of identifying the number of fingers held up by the user. 
+
 Num Fingers | Command
 ------------ | -------------
 0 | Stop
