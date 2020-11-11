@@ -9,9 +9,12 @@ We chose this project in order to further explore algorithms related to computer
 This project seeks to show a working implementation of the above methods/techniques such that others can understand our process and so we can gain understanding about how these types of problems are tackled in industry.
 
 ## Overview / an example of it in action!
-We ended up creating two different control frameworks. The first shown above uses the location of the hand within the image to control the robot. The y coordinate controls the linear velocity, while the x coordinate controls the angular velocity.
-![Running via xy hand control](/docs/images/handcontrol.gif)
+We ended up creating two different control frameworks.
 
+![Running via xy hand control](/docs/images/handcontrol.gif)
+The first shown above uses the location of the hand within the image to control the robot. The y coordinate controls the linear velocity, while the x coordinate controls the angular velocity.
+
+  <img width="1208" height="525" src="/docs/images/fingerDriving.gif">
 The second control framework consists of identifying the number of fingers held up by the user. 
 Num Fingers | Command
 ------------ | -------------
@@ -20,8 +23,6 @@ Num Fingers | Command
 3 | Turn Right
 4 | Reverse
 5 | Forward
-
-  <img width="1208" height="525" src="/docs/images/fingerDriving.gif">
 
 
 ## Machine Learning Model Development Process
