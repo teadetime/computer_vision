@@ -159,6 +159,8 @@ In almost any views, this is a very rudimentary start to the problem of “gestu
 Indiana University, EgoHands: A Dataset for Hands in Complex Egocentric Interactions
 vision.soic.indiana.edu/projects/egohands/
 
+Mühler, Vincent. “Simple Hand Gesture Recognition Using OpenCV and JavaScript.” Medium, Medium, 7 Dec. 2017, medium.com/@muehler.v/simple-hand-gesture-recognition-using-opencv-and-javascript-eb3d6ced28a0. 
+
 N. Dwina, F. Arnia and K. Munadi, "Skin segmentation based on improved thresholding method," 2018 International ECTI Northern Section Conference on Electrical, Electronics, Computer and Telecommunications Engineering (ECTI-NCON), Chiang Rai, 2018, pp. 95-99, doi: 10.1109/ECTI-NCON.2018.8378289.
 
 Victor Dibia, HandTrack: A Library For Prototyping Real-time Hand TrackingInterfaces using Convolutional Neural Networks,
