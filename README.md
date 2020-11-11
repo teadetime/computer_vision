@@ -59,8 +59,7 @@ Here is the first run of the Mobilenetv2 320x320 custom model
 ### Hand Segmentation/Masking
 After the hand has been localized within the image using our TensorFlow model, we use pixel-wise segmentation to isolate the hand from background pixels within the bounding box. We accomplished this through color thresholding, using parameters described by N. Dwina et al. These parameters are listed below in the RGB color space.
 
-<img src="https://bit.ly/38sU7Gx" align="center" border="0" alt="\begin{center}R > 95\hspace{0.2cm} AND \hspace{0.2cm}G > 40\hspace{0.2cm} AND \hspace{0.2cm}B > 20\hspace{0.2cm} AND\\max(R,G,B)-min(R,G,B) > 15 \hspace{0.2cm} AND |R-G| > 15 \hspace{0.2cm} \\AND \hspace{0.2cm} R > G \hspace{0.2cm} AND\hspace{0.2cm} R > B \hspace{0.2cm} AND \hspace{0.2cm} G > B\end{center}" width="387" height="56" />
-
+![Thresholding Parameters](/docs/images/thresholdParams.jpg)
 
 
 
