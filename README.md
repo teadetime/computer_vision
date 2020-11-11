@@ -57,11 +57,11 @@ Here is the first run of the Mobilenetv2 320x320 custom model
 
 ## OpenCV implementation and finger counting
 ### Hand Segmentation/Masking
-After the hand has been localized within the image using our TensorFlow model, we use pixel-wise segmentation to isolate the hand from background pixels within the bounding box. We accomplished this through color thresholding, using parameters described by N. Dwina et al. These parameters are listed below in the RGB color space. Finally, we made use of OpenCV's `erode()` and `dilate()` functions in order to clean some of the noise.
+After the hand has been localized within the image using our TensorFlow model, we use pixel-wise segmentation to isolate the hand from background pixels within the bounding box. We accomplished this through color thresholding, using parameters described by N. Dwina et al. These parameters are listed below in the RGB color space. 
 
 ![Thresholding Parameters](/docs/images/thresholdParams.jpg)
 
-We initially tried to loop through each pixel of each frame but that was very slow, giving us very few frames per second. In order to speed up the thresholding process we did the thresholding in layers. Each parameter above was it's own layer. Pixels that fulfilled the constraint were given a value of 255, while pixels that did not meet the criteria were given a value a zero. Then, all 8 layers were added together and normalized to a scale between 0 and 8 based on the number of thresholds each pixel met. Any pixel that met all 8 criteria was given a value of 255, while everything else was set to 0. This strategy proved much more computationally efficient.
+We initially tried to loop through each pixel of each frame but that was very slow, giving us very few frames per second. In order to speed up the thresholding process we did the thresholding in layers. Each parameter above was it's own layer. Pixels that fulfilled the constraint were given a value of 255, while pixels that did not meet the criteria were given a value a zero. Then, all 8 layers were added together and normalized to a scale between 0 and 8 based on the number of thresholds each pixel met. Any pixel that met all 8 criteria was given a value of 255, while everything else was set to 0. This strategy proved much more computationally efficient. Finally, we made use of OpenCV's `erode()` and `dilate()` functions in order to clean some of the noise.
 
 ![Hand Segmentation Example](/docs/images/segmentation.jpg)
 
