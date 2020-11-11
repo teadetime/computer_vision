@@ -285,7 +285,7 @@ while(True):
                 frame_score = x_score+y_score+area_score+ml_score # Max should be around 5
                 bbox_score += frame_score
         #Print score output so that we can see how it fluctuates
-        cv2.putText(image, "BBox Score: "str(int(bbox_score)), (7, 170), font, 1, (120, 205, 40), 3, cv2.LINE_AA)
+        cv2.putText(image, "BBox Score: " + str(int(bbox_score)), (7, 170), font, 1, (120, 205, 40), 3, cv2.LINE_AA)
         # Add frame to past frames
         past_frames.append(info_dict)
         avg_bbox_scores.append(bbox_score)
