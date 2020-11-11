@@ -144,7 +144,7 @@ class tele(object):
                         frame_score = self.compute_score(area_score, frme, info_dict, ml_score)
                         bbox_score += frame_score
                 # Print score output so that we can see how it fluctuates
-                cv2.putText(image, str(int(bbox_score)), (7, 170), font, 1, (120, 205, 40), 3, cv2.LINE_AA)
+                cv2.putText(image, "BBox score: "+str(int(bbox_score)), (7, 435), font, 1, (100, 255, 0), 3, cv2.LINE_AA)
 
                 # Add frame to past frames
                 past_frames.append(info_dict)
@@ -219,7 +219,7 @@ class tele(object):
             # converting the fps into integer
             fps = str(int(fps))
             # puting the FPS count on the frame
-            cv2.putText(image, fps, (7, 70), font, 3, (100, 255, 0), 3, cv2.LINE_AA)
+            cv2.putText(image, "FPS: "+fps, (7, 470), font, 1, (100, 255, 0), 3, cv2.LINE_AA)
             cv2.imshow('Inference', image)
 
             # Keyboard control

@@ -1,6 +1,5 @@
 import cv2
 import scipy.cluster.hierarchy as hcluster
-
 import numpy as np
 
 
@@ -25,6 +24,7 @@ def segmentHand(frame):
     ret, frameFiltered = cv2.threshold(floatSum, 7, 8, cv2.THRESH_BINARY)
     frameFiltered[frameFiltered >= 8] = 255
 
+    #Apply erosion and dilation techniques to lower noise within the mask
     frameFiltered = cv2.erode(frameFiltered, None, iterations=2)
     frameFiltered = cv2.dilate(frameFiltered, None, iterations=6)
     frameFiltered = cv2.erode(frameFiltered, None, iterations=2)
