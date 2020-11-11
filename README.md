@@ -98,7 +98,7 @@ Shown above is the three point cavities formed by the hand within the convex hul
 
 ## ROS Node and other Integration
 #### Model Output processing
-The model along with the webcam processing causes the software to run <20fps while running the neato simulator. We feel this is a reasonable rate for our purposes. This rate is still fast enough that there is a large chance of bad annotations being made during transition movements (our model isn’t perfect and it’s making 20 predictions a second) __we have decided to attempt to smooth the resulting bounding boxes.__ This allows us to save computation time and only perform finger detection on frames that are likely to be valid.
+The model along with the webcam processing causes the software to run <20fps while running the neato simulator. We feel this is a reasonable rate for our purposes. This rate is still fast enough that there is a large chance of bad annotations being made during transition movements (our model isn’t perfect and it’s making 20 predictions a second) because of this __we decided to attempt to smooth the resulting bounding boxes.__ This would allow us to save computation time and only perform finger detection on frames that are likely to be valid.
 
 Smoothing is accomplished by:
 - Recording past bounding boxes
@@ -113,7 +113,7 @@ y_score = 1/math.e**(y_off**(1/3))
 frame_score = x_score+y_score+area_score+ml_score # Max should be around 5
 ```  
 - The above implementation has not been mathematically justified. It attempts to give high scores to boxes that are close in location to previous boxes and to ones with high confidence and size
-- If the “score” is significantly lower that the average score of the stored boxes than this is likely a bad frame aka(low confidence, small, or large translation)
+- If the “score” is significantly lower than the average score of the stored boxes then this is likely a bad frame aka (low confidence, small bbox, or large translation)
 
 #### Finger/Neato Post-Processing
 There is also post processing done on the neato side of things to help ensure continuity of commands being sent to the robot.
