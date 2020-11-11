@@ -13,7 +13,6 @@ import math
 warnings.filterwarnings('ignore')   # Suppress Matplotlib warnings
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as viz_utils
-import scipy.cluster.hierarchy as hcluster
 
 IMAGE_DIR = "images/another"
 IMAGE_PATHS = glob.glob(IMAGE_DIR+"/*")
@@ -47,36 +46,56 @@ def segmentHand(frame):
     ret, frameFiltered = cv2.threshold(floatSum, 7, 8, cv2.THRESH_BINARY)
     frameFiltered[frameFiltered>=8] = 255
 
+    frameFiltered = cv2.erode(frameFiltered, None, iterations=2)
+    frameFiltered = cv2.dilate(frameFiltered, None, iterations=6)
+    frameFiltered = cv2.erode(frameFiltered, None, iterations=2)
+
     return frameFiltered
 
 def isFinger(pt1,pt2,pt3):
+    '''
+    Based on the hull defects start, far, and stop points, return whether a particular point is a finger
+    '''
     threshold = 60 #degree threshold
 
+    #Convert the tuple points to np arrays
     pt1 = np.asarray(pt1)
     pt2 = np.asarray(pt2)
     pt3 = np.asarray(pt3)
+
+    #Take the difference between the center points and two other points
     pt21 = pt1 - pt2
     pt32 = pt3 - pt2
 
+    #Calculate the angle between the three points
     cosine_angle = np.dot(pt21, pt32) / (np.linalg.norm(pt21) * np.linalg.norm(pt32))
     angle = np.arccos(cosine_angle)
 
+    #If the angle between the three points is less than the threshold value, the center point is a finger tip
     if np.degrees(angle)<threshold:
         return True
     else:
         return False
 
 
-def handSkeleton(img,imgFilt):
-    contours, hierarchy = cv2.findContours(imgFilt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE )
+def handSkeleton(img,imgFilt, xOffset, yOffset):
+    '''
+    Given a binary mask, calculate the contour of the hand. Then, calculate the convex hull and corresponding convexity defects. 
+    '''
+
+    #Calculate contours and draw them on webcam frame
+    contours, hierarchy = cv2.findContours(imgFilt, cv2.CV_RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset=(xOffset,yOffset)) #CV_RETR_TREE, CV_RETR_EXTERNAL
     contours = max(contours, key=lambda x: cv2.contourArea(x))
     cv2.drawContours(img, [contours], -1, (255,255,0), 2)
+
+    #Generate convex hull based on the contour
     hull = cv2.convexHull(contours,returnPoints=False)
     try:
+        #Generate convexity defects based on convex hull
         defects = cv2.convexityDefects(contours,hull,False)
+        cv2.putText(image, "GOOD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
+        #Create lists of starting, ending and far points of convexity defects
         points = []
-        pointsX = []
-        pointsY = []
         startPT = []
         endPT = []
         farPT = []
@@ -86,15 +105,13 @@ def handSkeleton(img,imgFilt):
             end = tuple(contours[e][0])
             far = tuple(contours[f][0])
             points.extend([start,end,far])
-            pointsX.extend([start[0],end[0],far[0]])
-            pointsY.extend([start[1],end[1],far[1]])
-            if np.linalg.norm(np.array(start)-np.array(far)) > 10: #40
+
+            #Ignore small noisy defects below threshold value
+            if np.linalg.norm(np.array(start)-np.array(far)) > 1: #40
                 startPT.append(start)
                 farPT.append(far)
                 endPT.append(end)
-
-        clusters = hcluster.fclusterdata(points, 20, criterion="distance") #20 Threshold hardcoded
-        
+       
         startPT.append(startPT[0])
         farPT.append(farPT[0])
         endPT.append(endPT[0])
@@ -109,11 +126,12 @@ def handSkeleton(img,imgFilt):
             if np.linalg.norm(np.array(start)-np.array(far)) < 20:
                 avgPT = tuple((round((startX+endX)/2),round((startY+endY)/2)))
                 avg.append(avgPT)
-        
+        if len(avgPT) ==0:
+            cv2.putText(image, "BAD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
         return avg, farPT, img
 
     except:
-        pass
+        cv2.putText(image,"No Defects Detected", (200, 170), font, 3, (120, 205, 40), 3, cv2.LINE_AA)
 
 if not use_saved:
     cap = cv2.VideoCapture(0)
@@ -283,8 +301,7 @@ while(True):
             bboxes.append(bbox)
             bboxFiltered = segmentHand(bbox)
             try:
-                avg, farPT, img = handSkeleton(bbox, bboxFiltered)
-
+                avg, farPT, img = handSkeleton(image, bboxFiltered, xmin, ymin)
                 numFingers = 0
                 for i in range(len(avg)):
                     if isFinger(farPT[i],avg[i],farPT[i+1]):
@@ -292,10 +309,10 @@ while(True):
                         cv2.line(img,avg[i],farPT[i],[255,0,0],2)
                         cv2.line(img,avg[i],farPT[i+1],[255,0,0],2)
                         numFingers+=1
+                    if i<len(avg)-1:
+                        cv2.line(img,avg[i],avg[i+1],[255,0,255],2)
                     else:
-                        print("No")
-                        pass
-
+                        cv2.line(img,avg[0],avg[i],[255,0,255],2)
                 cv2.putText(image, str(numFingers), (7, 400), font, 3, (100, 255, 0), 3, cv2.LINE_AA)
             except:
                 pass
