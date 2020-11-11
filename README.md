@@ -78,7 +78,11 @@ By using convexity defects we are able identify fingers. A convexity defect is m
 <p align="center">
 <img width="393" height="525" src="/docs/images/hand_skeleton.png">
   
-Shown above is the three point cavities formed by the hand within the convex hull. Each cavities start is denoted by the blue point, deepest spot denoted by the red dot, and end point denoted by the purple dot. The cavities found in the spaces between fingers can be characterized as deep and very narrow. This means that the angle between the start, deepest, and end point form an acute angle. If the angle between these three points is acute it can be assumed that the starting and ending points are located at finger tips. There are redundant points however. some finger tips have two start/end points on them, while others only have one. To solve this problem each of the suspected fingertip points is stored in an array, and hierarchical clustering is used to distinguish different fingertips. The total number of clusters is equivalent to the total number of fingers being held up. 
+Shown above is the three point cavities formed by the hand within the convex hull. Each cavities start is denoted by the blue point, deepest spot denoted by the red dot, and end point denoted by the purple dot. The cavities found in the spaces between fingers can be characterized as deep and very narrow. This means that the angle between the start, deepest, and end point form an acute angle. If the angle between these three points is acute it can be assumed that the starting and ending points are located at finger tips. There are redundant points however. some finger tips have two start/end points on them, while others only have one. To solve this problem each of the suspected fingertip points is stored in an array, and hierarchical clustering is used to distinguish different fingertips. The total number of clusters is equivalent to the total number of fingers being held up.
+
+<p align="center">
+  <img src="/docs/images/countingFingers.gif">
+
 
 ## ROS Node and other Integration
 #### Model Output processing
