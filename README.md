@@ -69,7 +69,11 @@ We initially tried to loop through each pixel of each frame but that was very sl
 Once the binary mask has been created we can use the OpenCV's `findContours()` function to create a contour outlining the pixels belonging to the hand.
 
 <p align="center">
+<img width="1182" height="525" src="/docs/images/threeHandsLabelled.jpg">
+
+<p align="center">
 <img width="394" height="525" src="/docs/images/hand_contours.png">
+  
   
 After creating the contour, we used OpenCV's `convexHull()` function to create a convex polygon consisting of the outter most edges of the contour. 
 <p align="center">
