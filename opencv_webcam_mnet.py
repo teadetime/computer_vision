@@ -58,7 +58,9 @@ def segmentHand(frame):
 
 def isFinger(pt1,pt2,pt3):
     '''
-    Based on the hull defects start, far, and stop points, return whether a particular point is a finger
+    Based on the hull defects start, far, and stop points, 
+    return whether a particular set of points matches the
+    characteristics of a finger.
     '''
     threshold = 90 #degree threshold
 
@@ -82,9 +84,12 @@ def isFinger(pt1,pt2,pt3):
         return False
 
 
-def handSkeleton(img,imgFilt, xOffset, yOffset):
+def getFingertips(img,imgFilt, xOffset, yOffset):
     '''
-    Given a binary mask, calculate the contour of the hand. Then, calculate the convex hull and corresponding convexity defects. 
+    Given a binary mask, calculate the contour of the hand. 
+    Then, calculate the convex hull and corresponding convexity defects. 
+    Returns the total number of fingers and an annotated version of the
+    image where finger tips are labelled.
     '''
 
     #Calculate contours and draw them on webcam frame
@@ -95,8 +100,6 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
     #Generate convex hull based on the contour
     hull = cv2.convexHull(contours,returnPoints=False)
     
-    
-    
     #Generate convexity defects based on convex hull
     defects = cv2.convexityDefects(contours,hull,False)
     
@@ -104,24 +107,24 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
     points = []
     pointsX = []
     pointsY = []
-    startPT = []
-    endPT = []
-    farPT = []
+    
     for i in range(defects.shape[0]):
         s,e,f,d = defects[i,0]
         start = tuple(contours[s][0])
         end = tuple(contours[e][0])
         far = tuple(contours[f][0])
 
+        #If given defect points match finger characteristics add viable points to the list 
         if isFinger(start,far,end) and d > 5000:
             points.extend([start,end])
             pointsX.extend([start[0],end[0]])
             pointsY.extend([start[1],end[1]])
-        
+    
+    #Use hierarchical clustering to match redundant points
     clusters = hcluster.fclusterdata(points, 20, criterion="distance")
-
-    for i in range(max(clusters)):
-       
+    numFingers = max(clusters)
+    #Average X and Y values for points in the same cluster
+    for i in range(numFingers):
         indices = np.asarray(np.where(clusters== i+1)).astype(int)
         indices = indices[0]
         
@@ -130,14 +133,12 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
         averagePointsX = round(np.average(averagePointsX))
         averagePointsY = round(np.average(averagePointsY))
        
-        a = (averagePointsX,averagePointsY)
+        #Visualize Fingertip
         cv2.circle(img,(averagePointsX,averagePointsY),10,[0,255,255],-1)
         
-    numFingers = max(clusters)
-    
+    #Return number of fingers and annotated image
     return numFingers, img
        
-    
 
 if not use_saved:
     cap = cv2.VideoCapture(0)
@@ -305,15 +306,22 @@ while(True):
             # print(ymin, xmin, crop_h, crop_w)
             bbox = tf.image.crop_to_bounding_box(image,ymin,xmin, crop_h_inc, crop_w_inc).numpy()
             bboxes.append(bbox)
+
+            #Segment the hand with a binary mask
             bboxFiltered = segmentHand(bbox)
+
+            #Initialize number of fingers to 0
             numFingers = 0
+
             try:
-                numFingers, image = handSkeleton(image, bboxFiltered, xmin, ymin)
+
+                numFingers, image = getFingertips(image, bboxFiltered, xmin, ymin)
 
             except:
                 pass
-
-            cv2.putText(image, "Num Fingers: " +str(numFingers), (7, 400), font, 3, (100, 255, 0), 3, cv2.LINE_AA)
+            
+            numFingers = min(numFingers,5)
+            cv2.putText(image, "Num Fingers: " +str(numFingers), (7, 400), font, 1, (100, 255, 0), 3, cv2.LINE_AA)
             
             
 
