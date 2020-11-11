@@ -46,10 +46,11 @@ def segmentHand(frame):
     ret, frameFiltered = cv2.threshold(floatSum, 7, 8, cv2.THRESH_BINARY)
     frameFiltered[frameFiltered>=8] = 255
 
+    
     frameFiltered = cv2.erode(frameFiltered, None, iterations=2)
     frameFiltered = cv2.dilate(frameFiltered, None, iterations=6)
     frameFiltered = cv2.erode(frameFiltered, None, iterations=2)
-
+    
     return frameFiltered
 
 def isFinger(pt1,pt2,pt3):
@@ -84,37 +85,44 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
     '''
 
     #Calculate contours and draw them on webcam frame
-    contours, hierarchy = cv2.findContours(imgFilt, cv2.CV_RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset=(xOffset,yOffset)) #CV_RETR_TREE, CV_RETR_EXTERNAL
+    contours, hierarchy = cv2.findContours(imgFilt, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE, offset=(xOffset,yOffset)) #RETR_TREE, RETR_EXTERNAL
     contours = max(contours, key=lambda x: cv2.contourArea(x))
     cv2.drawContours(img, [contours], -1, (255,255,0), 2)
 
     #Generate convex hull based on the contour
     hull = cv2.convexHull(contours,returnPoints=False)
-    try:
-        #Generate convexity defects based on convex hull
-        defects = cv2.convexityDefects(contours,hull,False)
-        cv2.putText(img, "GOOD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
-        #Create lists of starting, ending and far points of convexity defects
-        points = []
-        startPT = []
-        endPT = []
-        farPT = []
-        for i in range(defects.shape[0]):
-            s,e,f,d = defects[i,0]
-            start = tuple(contours[s][0])
-            end = tuple(contours[e][0])
-            far = tuple(contours[f][0])
-            points.extend([start,end,far])
-
-            #Ignore small noisy defects below threshold value
-            if np.linalg.norm(np.array(start)-np.array(far)) > 1: #40
-                startPT.append(start)
-                farPT.append(far)
-                endPT.append(end)
+    
+    
+    
+    #Generate convexity defects based on convex hull
+    defects = cv2.convexityDefects(contours,hull,False)
+    cv2.putText(img, "GOOD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
+    #Create lists of starting, ending and far points of convexity defects
+    points = []
+    startPT = []
+    endPT = []
+    farPT = []
+    for i in range(defects.shape[0]):
+        s,e,f,d = defects[i,0]
+        start = tuple(contours[s][0])
+        end = tuple(contours[e][0])
+        far = tuple(contours[f][0])
+        points.extend([start,end,far])
+        
+        #Ignore small noisy defects below threshold value
+        if np.linalg.norm(np.array(start)-np.array(far)) > 40: #40
+            cv2.circle(img,far,10,[255,255,255],-1)
+            cv2.circle(img,start,10,[0,255,0],-1)
+            cv2.circle(img,end,10,[0,0,255],-1)
+            startPT.append(start)
+            farPT.append(far)
+            endPT.append(end)
        
+    try:
         startPT.append(startPT[0])
         farPT.append(farPT[0])
         endPT.append(endPT[0])
+        
 
         avg = []
         for i in range(1,len(startPT)):
@@ -123,15 +131,13 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
             endX = endPT[i-1][0]
             endY = endPT[i-1][1]
             
-            if np.linalg.norm(np.array(start)-np.array(far)) < 20:
+            if np.linalg.norm(np.array(start)-np.array(end)) < 20:
                 avgPT = tuple((round((startX+endX)/2),round((startY+endY)/2)))
                 avg.append(avgPT)
-        if len(avgPT) ==0:
-            cv2.putText(img, "BAD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
-        return avg, farPT, img
 
-    except:
-        cv2.putText(image,"No Defects Detected", (200, 170), font, 3, (120, 205, 40), 3, cv2.LINE_AA)
+        return avg, farPT, img
+    except IndexError:
+        pass
 
 if not use_saved:
     cap = cv2.VideoCapture(0)
@@ -305,14 +311,14 @@ while(True):
                 numFingers = 0
                 for i in range(len(avg)):
                     if isFinger(farPT[i],avg[i],farPT[i+1]):
-                        cv2.circle(img,avg[i],10,[0,255,255],-1)
-                        cv2.line(img,avg[i],farPT[i],[255,0,0],2)
-                        cv2.line(img,avg[i],farPT[i+1],[255,0,0],2)
+                        cv2.circle(image,avg[i],10,[0,255,255],-1)
+                        cv2.line(image,avg[i],farPT[i],[255,0,0],2)
+                        cv2.line(image,avg[i],farPT[i+1],[255,0,0],2)
                         numFingers+=1
                     if i<len(avg)-1:
-                        cv2.line(img,avg[i],avg[i+1],[255,0,255],2)
+                        cv2.line(image,avg[i],avg[i+1],[255,0,255],2)
                     else:
-                        cv2.line(img,avg[0],avg[i],[255,0,255],2)
+                        cv2.line(image,avg[0],avg[i],[255,0,255],2)
                 cv2.putText(image, str(numFingers), (7, 400), font, 3, (100, 255, 0), 3, cv2.LINE_AA)
             except:
                 pass
