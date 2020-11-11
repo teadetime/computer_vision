@@ -32,7 +32,7 @@ This process can be broken down into several different steps.
 #### Choosing a Model to Transfer Learn off of
 - Tensorflow had a [model zoo](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/tf2_detection_zoo.md) containing models that are suitable to fine tune for object detection tasks.
 - We had experience with mobilenetv2, and thought that the 320x320 size would be sufficient for our webcam and would be trainable on our hardware (GTX 1060 6gb)
-- We also trained a model on EfficientNet 320x320 FILL IN RESULTS HERE
+- We also trained a model on EfficientNet 320x320. his model showed similar results of accuracy but took much longer to train and was too slow at performing inference to be effective in real time on CPU-only machine (one of our requirements)
 
 #### Setting up the model
 - After choosing a model you must download a saved "checkpoint" of the model that contains a starting point to train from
@@ -40,7 +40,6 @@ This process can be broken down into several different steps.
   - This file requires edits to indicate how long to train, paths to the dataset, model checkpoint, labels, and output directory
 
 #### Training the model
-- Once the pipeline is configured the model can be trained with `$ some command`
 - The model will save checkpoints periodically that can be trained off from if the process is stopped
 - Training may be monitored by tensorboard `$ tensorboard --logdir=models/YOUR_MODEL_OUTPUT_DIR`
   - Additionally you can run evaluation metrics to see how the model does on the evaluation dataset in real time `$ COMMAND --checkpoint-dir` *NOTE* This will not work if you have one GPU. To perform evaluation on cpu add `cpu only` in a copy of tf_train_main.py and adjust and rerun the command above
