@@ -17,7 +17,7 @@ The above screen capture shows one way of control that we implemented. The robot
 
 
 ## Machine Learning Model Development Process
-Delvoping the ML object deteciton model can be broken down into multiple steps.
+Developing the ML object detection model can be broken down into multiple steps.
 For even more detail of the process to create this model please look [at our other documentation](/docs/model_dev.md)
 #### Preliminary Decisions
 - We chose to use the Tensorflow Object Detection API. This was chosen over PyTorch because of our prior experience with it.
@@ -70,25 +70,25 @@ We initially tried to loop through each pixel of each frame but that was very sl
 <img width="1182" height="435" src="/docs/images/threeHandsLabelled.jpg">
   
 The three tools we need in order to be able to identify and count the number of fingers being held up are contours, convex hulls and convexity defects.
-Once the binary mask has been created we can use the OpenCV's `findContours()` function to create a contour outlining the pixels belonging to the hand. After creating the contour, we used OpenCV's `convexHull()` function to create a convex polygon consisting of the outter most edges of the contour. Next, we used OpenCV's `convexityDefects()` function to identify major concavities within the convex hull.
+Once the binary mask has been created we can use OpenCV's `findContours()` function to create a contour outlining the pixels belonging to the hand. After creating the contour, we used OpenCV's `convexHull()` function to create a convex polygon consisting of the outermost edges of the contour. Next, we used OpenCV's `convexityDefects()` function to identify major concavities within the convex hull.
 
 ### Identifying and Counting Fingers
-By using convexity defects we are able identify fingers. A convexity defect is made up of three points, the starting point, located on the convex hull, the deepest point in the cavity, furthest from the convex hull, and the ending point again located on the convex hull, but on the other side of the cavity. 
+By using convexity defects we are able to identify fingers. A convexity defect is made up of three points, the starting point, located on the convex hull, the deepest point in the cavity, furthest from the convex hull, and the ending point again located on the convex hull, but on the other side of the cavity. 
 
 <p align="center">
 <img width="393" height="525" src="/docs/images/hand_skeleton.png">
   
-Shown above is the three point cavities formed by the hand within the convex hull. Each cavities start is denoted by the blue point, deepest spot denoted by the red dot, and end point denoted by the purple dot. The cavities found in the spaces between fingers can be characterized as deep and very narrow. This means that the angle between the start, deepest, and end point form an acute angle. If the angle between these three points is acute it can be assumed that the starting and ending points are located at finger tips. There are redundant points however. some finger tips have two start/end points on them, while others only have one. To solve this problem each of the suspected fingertip points is stored in an array, and hierarchical clustering is used to distinguish different fingertips. The total number of clusters is equivalent to the total number of fingers being held up. The average position of each cluster can also be used to better pinpoint the exact location of the fingertip.
+Shown above is the three point cavities formed by the hand within the convex hull. Each cavities start is denoted by the blue point, deepest spot denoted by the red dot, and end point denoted by the purple dot. The cavities found in the spaces between fingers can be characterized as deep and very narrow. This means that the angle between the start, deepest, and end point form an acute angle. If the angle between these three points is acute it can be assumed that the starting and ending points are located at fingertips. There are redundant points however, some fingertips have two start/end points on them, while others only have one. To solve this problem each of the suspected fingertip points is stored in an array, and hierarchical clustering is used to distinguish different fingertips. The total number of clusters is equivalent to the total number of fingers being held up. The average position of each cluster can also be used to better pinpoint the exact location of the fingertip.
 
 <p align="center">
   <img src="/docs/images/countingFingers.gif">
   
-  The on obvious issue with this detection strategy is the fact that it cannot pickup on when just one finger is raised. This is because atleast two fingers are needed to create a gap between them. We spent some time looking at alternate approaches in order to be able to identify a single finger, however this seemed to be the most robust implementation, and we only had four command for our robot, meaning we didn't need the single finger state.
+  The one obvious issue with this detection strategy is the fact that it cannot pickup on when just one finger is raised. This is because at least two fingers are needed to create a gap between them. We spent some time looking at alternate approaches in order to be able to identify a single finger, however this seemed to be the most robust implementation, and we only had four commands for our robot, meaning we didn't need the single finger state.
 
 
 ## ROS Node and other Integration
 #### Model Output processing
-The model along with the webcam processing causes the software to run <20fps while running the neato simulator. We feel this is a reasonable rate for our purposes. This rate is still fast enough that there is a large chance of bad annotations being made during transition movements (our model isn’t perfect and it’s making 20 predictions a second) __we have decided to attempt to smooth the resulting bounding boxes.__ This allows us to save computation time and only preform finger detection on frames that are likely to be valid.
+The model along with the webcam processing causes the software to run <20fps while running the neato simulator. We feel this is a reasonable rate for our purposes. This rate is still fast enough that there is a large chance of bad annotations being made during transition movements (our model isn’t perfect and it’s making 20 predictions a second) __we have decided to attempt to smooth the resulting bounding boxes.__ This allows us to save computation time and only perform finger detection on frames that are likely to be valid.
 
 Smoothing is accomplished by:
 - Recording past bounding boxes
@@ -97,7 +97,7 @@ Smoothing is accomplished by:
 area = area of bounding box / .45 
 ml_score = 2 * float(current prediction confidence) ** 3
 x_off = abs(center x differences)
-y_off = abs(center y differnces)
+y_off = abs(center y differences)
 x_score = 1/math.e**(x_off**(1/3))
 y_score = 1/math.e**(y_off**(1/3))
 frame_score = x_score+y_score+area_score+ml_score # Max should be around 5
