@@ -63,6 +63,8 @@ After the hand has been localized within the image using our TensorFlow model, w
 
 We initially tried to loop through each pixel of each frame but that was very slow, giving us very few frames per second. In order to speed up the thresholding process we did the thresholding in layers. Each parameter above was it's own layer. Pixels that fulfilled the constraint were given a value of 255, while pixels that did not meet the criteria were given a value a zero. Then, all 8 layers were added together and normalized to a scale between 0 and 8 based on the number of thresholds each pixel met. Any pixel that met all 8 criteria was given a value of 255, while everything else was set to 0. This strategy proved much more computationally efficient.
 
+![Thresholding Parameters](/docs/images/segmentation.jpg)
+
 ## ROS Node and other Integration
 #### Model Output processing
 The model along with the webcam processing causes the software to run <20fps while running the neato simulator. We feel this is a reasonable rate for our purposes. This rate is still fast enough that there is a large chance of bad annotations being made during transition movements (our model isn’t perfect and it’s making 20 predictions a second) __we have decided to attempt to smooth the resulting bounding boxes.__ This allows us to save computation time and only preform finger detection on frames that are likely to be valid.
