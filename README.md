@@ -56,7 +56,10 @@ Here is the first run of the Mobilenetv2 320x320 custom model
 ![The model](/docs/images/object%20detection.gif)
 
 ## OpenCV implementation and finger counting
-SANDER FILL IN HERE
+### Hand Segmentation/Masking
+After the hand has been localized within the image using our TensorFlow model, we use pixel-wise segmentation to isolate the hand from background pixels within the bounding box. We accomplished this through color thresholding, using parameters described by N. Dwina et al. These parameters are listed below in the RGB color space.
+
+<img src="https://bit.ly/38sU7Gx" align="center" border="0" alt="\begin{center}R > 95\hspace{0.2cm} AND \hspace{0.2cm}G > 40\hspace{0.2cm} AND \hspace{0.2cm}B > 20\hspace{0.2cm} AND\\max(R,G,B)-min(R,G,B) > 15 \hspace{0.2cm} AND |R-G| > 15 \hspace{0.2cm} \\AND \hspace{0.2cm} R > G \hspace{0.2cm} AND\hspace{0.2cm} R > B \hspace{0.2cm} AND \hspace{0.2cm} G > B\end{center}" width="387" height="56" />
 
 
 
@@ -120,8 +123,14 @@ In almost any views, this is a very rudimentary start to the problem of “gestu
 
 
 ## Sources
+Indiana University, EgoHands: A Dataset for Hands in Complex Egocentric Interactions
+vision.soic.indiana.edu/projects/egohands/
+
+N. Dwina, F. Arnia and K. Munadi, "Skin segmentation based on improved thresholding method," 2018 International ECTI Northern Section Conference on Electrical, Electronics, Computer and Telecommunications Engineering (ECTI-NCON), Chiang Rai, 2018, pp. 95-99, doi: 10.1109/ECTI-NCON.2018.8378289.
+
 Victor Dibia, HandTrack: A Library For Prototyping Real-time Hand TrackingInterfaces using Convolutional Neural Networks,
 https://github.com/victordibia/handtracking
 
-Indiana University, EgoHands: A Dataset for Hands in Complex Egocentric Interactions
-vision.soic.indiana.edu/projects/egohands/
+
+
+
