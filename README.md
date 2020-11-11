@@ -58,7 +58,9 @@ Here is the first run of the Mobilenetv2 320x320 custom model
 ## OpenCV Implementation and Finger Counting
 ### Hand Segmentation/Masking
 After the hand has been localized within the image using our TensorFlow model, we use pixel-wise segmentation to isolate the hand from background pixels within the bounding box. We accomplished this through color thresholding, using parameters described by N. Dwina et al. These parameters are listed below in the RGB color space. 
-
+<p align="center">
+ <img src="/docs/images/thresholdParams.jpg">
+  
 ![Thresholding Parameters](/docs/images/thresholdParams.jpg)
 
 We initially tried to loop through each pixel of each frame but that was very slow, giving us very few frames per second. In order to speed up the thresholding process we did the thresholding in layers. Each parameter above was it's own layer. Pixels that fulfilled the constraint were given a value of 255, while pixels that did not meet the criteria were given a value a zero. Then, all 8 layers were added together and normalized to a scale between 0 and 8 based on the number of thresholds each pixel met. Any pixel that met all 8 criteria was given a value of 255, while everything else was set to 0. This strategy proved much more computationally efficient. Finally, we made use of OpenCV's `erode()` and `dilate()` functions in order to clean some of the noise.
@@ -75,7 +77,8 @@ Once the binary mask has been created we can use the OpenCV's `findContours()` f
 ### Identifying and Counting Fingers
 By using convexity defects we are able identify fingers. A convexity defect is made up of three points, the starting point, located on the convex hull, the deepest point in the cavity, furthest from the convex hull, and the ending point again located on the convex hull, but on the other side of the cavity. The cavities found in the spaces between fingers can be characterized as deep and very narrow. This means that the angle between the start, deepest, and end point form an acute angle.
 
-
+<p align="center">
+<img width="393" height="525" src="/docs/images/hand_skeleton.png">
 
 ## ROS Node and other Integration
 #### Model Output processing
