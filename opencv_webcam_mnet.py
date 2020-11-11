@@ -121,7 +121,10 @@ def getFingertips(img,imgFilt, xOffset, yOffset):
             pointsY.extend([start[1],end[1]])
     
     #Use hierarchical clustering to match redundant points
-    clusters = hcluster.fclusterdata(points, 20, criterion="distance")
+    try:
+        clusters = hcluster.fclusterdata(points, 20, criterion="distance")
+    except:
+        return 0, img
     numFingers = max(clusters)
     #Average X and Y values for points in the same cluster
     for i in range(numFingers):
@@ -134,7 +137,7 @@ def getFingertips(img,imgFilt, xOffset, yOffset):
         averagePointsY = round(np.average(averagePointsY))
        
         #Visualize Fingertip
-        cv2.circle(img,(averagePointsX,averagePointsY),10,[0,255,255],-1)
+        cv2.circle(img,(int(averagePointsX),int(averagePointsY)),10,[0,255,255],-1)
         
     #Return number of fingers and annotated image
     return numFingers, img
@@ -310,16 +313,9 @@ while(True):
             #Segment the hand with a binary mask
             bboxFiltered = segmentHand(bbox)
 
-            #Initialize number of fingers to 0
-            numFingers = 0
+            #Returns 0 if no fingers detected (also for 1 finger) or number of other fingers
+            numFingers, image = getFingertips(image, bboxFiltered, xmin, ymin)
 
-            try:
-
-                numFingers, image = getFingertips(image, bboxFiltered, xmin, ymin)
-
-            except:
-                pass
-            
             numFingers = min(numFingers,5)
             cv2.putText(image, "Num Fingers: " +str(numFingers), (7, 400), font, 1, (100, 255, 0), 3, cv2.LINE_AA)
             
