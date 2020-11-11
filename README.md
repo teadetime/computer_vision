@@ -67,6 +67,7 @@ We initially tried to loop through each pixel of each frame but that was very sl
 
 ### Contours, Convex Hulls and Defects
 Once the binary mask has been created we can use the OpenCV's `findContours()` function to create a contour outlining the pixels belonging to the hand. 
+![Hand Segmentation Example](/docs/images/hand_contours.png =250x)
 
 ## ROS Node and other Integration
 #### Model Output processing
