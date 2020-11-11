@@ -68,6 +68,7 @@ We initially tried to loop through each pixel of each frame but that was very sl
 ### Contours, Convex Hulls and Defects
 <p align="center">
 <img width="1182" height="435" src="/docs/images/threeHandsLabelled.jpg">
+  
 The three tools we need in order to be able to identify and count the number of fingers being held up are contours, convex hulls and convexity defects.
 Once the binary mask has been created we can use the OpenCV's `findContours()` function to create a contour outlining the pixels belonging to the hand. After creating the contour, we used OpenCV's `convexHull()` function to create a convex polygon consisting of the outter most edges of the contour. Next, we used OpenCV's `convexityDefects()` function to identify major concavities within the convex hull. These areas are shown with the red dots.
 
