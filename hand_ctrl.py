@@ -11,7 +11,7 @@ import sys
 import termios
 import cv2
 import math
-import scipy
+import scipy.cluster.hierarchy as hcluster
 import pathlib
 import os
 from tensorflow import keras
@@ -75,7 +75,9 @@ def segmentHand(frame):
 
 def isFinger(pt1, pt2, pt3):
     '''
-    Based on the hull defects start, far, and stop points, return whether a particular point is a finger
+    Based on the hull defects start, far, and stop points,
+    return whether a particular set of points matches the
+    characteristics of a finger.
     '''
     threshold = 90  # degree threshold
 
@@ -99,9 +101,12 @@ def isFinger(pt1, pt2, pt3):
         return False
 
 
-def handSkeleton(img, imgFilt, xOffset, yOffset):
+def getFingertips(img, imgFilt, xOffset, yOffset):
     '''
-    Given a binary mask, calculate the contour of the hand. Then, calculate the convex hull and corresponding convexity defects.
+    Given a binary mask, calculate the contour of the hand.
+    Then, calculate the convex hull and corresponding convexity defects.
+    Returns the total number of fingers and an annotated version of the
+    image where finger tips are labelled.
     '''
 
     # Calculate contours and draw them on webcam frame
@@ -120,23 +125,27 @@ def handSkeleton(img, imgFilt, xOffset, yOffset):
     points = []
     pointsX = []
     pointsY = []
-    startPT = []
-    endPT = []
-    farPT = []
+
     for i in range(defects.shape[0]):
         s, e, f, d = defects[i, 0]
         start = tuple(contours[s][0])
         end = tuple(contours[e][0])
         far = tuple(contours[f][0])
 
+        # If given defect points match finger characteristics add viable points to the list
         if isFinger(start, far, end) and d > 5000:
             points.extend([start, end])
             pointsX.extend([start[0], end[0]])
             pointsY.extend([start[1], end[1]])
 
-    clusters = hcluster.fclusterdata(points, 20, criterion="distance")
-
-    for i in range(max(clusters)):
+    # Use hierarchical clustering to match redundant points
+    try:
+        clusters = hcluster.fclusterdata(points, 20, criterion="distance")
+    except:
+        return 0, img
+    numFingers = max(clusters)
+    # Average X and Y values for points in the same cluster
+    for i in range(numFingers):
         indices = np.asarray(np.where(clusters == i + 1)).astype(int)
         indices = indices[0]
 
@@ -145,12 +154,12 @@ def handSkeleton(img, imgFilt, xOffset, yOffset):
         averagePointsX = round(np.average(averagePointsX))
         averagePointsY = round(np.average(averagePointsY))
 
-        a = (averagePointsX, averagePointsY)
-        cv2.circle(img, (averagePointsX, averagePointsY), 10, [0, 255, 255], -1)
+        # Visualize Fingertip
+        cv2.circle(img, (int(averagePointsX), int(averagePointsY)), 10, [0, 255, 255], -1)
 
-    numFingers = max(clusters)
-
+    # Return number of fingers and annotated image
     return numFingers, img
+
 
 class tele(object):
     def __init__(self):
@@ -178,6 +187,8 @@ class tele(object):
         print("Starting Program")
         run_inference = True
         position_control = False
+        visualizeBBox = False
+        visualizeContours = True
         prune = True
         prune_num = 1
         save_video = False
@@ -191,7 +202,7 @@ class tele(object):
         ang_v = 0
 
         last_good_box = None
-        num_fingers = None
+        numFingers = None
 
         num_past_frames = 30
         # used to record the time when we processed last frame
@@ -276,40 +287,34 @@ class tele(object):
                 if good_box:
                     # Save the last good box so that it can be used
                     # CROP THE BOUNDING BOX
-                    # print(ymin, xmin, crop_h, crop_w)
                     bbox = tf.image.crop_to_bounding_box(image, ymin, xmin, crop_h, crop_w).numpy()
-                    last_good_box = {"bbox": hand, "cent_x": center_x, "cent_y": center_y, "score": selected_scores[0], "image":bbox}
-
-                    """
-                    FINGER SEGMENTATION TIME!!
-                    """
+                    # Segment the hand with a binary mask
                     bboxFiltered = segmentHand(bbox)
-                    numFingers = 0
-                    try:
-                        numFingers, image = handSkeleton(image, bboxFiltered, xmin, ymin)
 
-                    except:
-                        print("failed to get fingers")
-                        pass
+                    # Returns 0 if no fingers detected (also for 1 finger) or number of other fingers
+                    numFingers, image = getFingertips(image, bboxFiltered, xmin, ymin)
 
-                    cv2.putText(image, "# Fingers: " + str(numFingers), (7, 400), font, 1, (100, 255, 0), 3,
+                    numFingers = min(numFingers, 5)
+                    cv2.putText(image, "Num Fingers: " + str(numFingers), (7, 400), font, 1, (100, 255, 0), 3,
                                 cv2.LINE_AA)
 
-                    # Visulaize the bboxes
-                    viz_utils.visualize_boxes_and_labels_on_image_array(
-                        image,
-                        selected_boxes,
-                        selected_classes,
-                        selected_scores,
-                        category_index,
-                        use_normalized_coordinates=True,
-                        max_boxes_to_draw=200,
-                        min_score_thresh=.50,
-                        agnostic_mode=False)
-                    num_fingers = int((last_good_box["cent_x"]-.5) * 4)
-                    print(num_fingers)
+                    # Visualize the bboxes
+                    if visualizeBBox:
+                        viz_utils.visualize_boxes_and_labels_on_image_array(
+                            image,
+                            selected_boxes,
+                            selected_classes,
+                            selected_scores,
+                            category_index,
+                            use_normalized_coordinates=True,
+                            max_boxes_to_draw=200,
+                            min_score_thresh=.50,
+                            agnostic_mode=False)
+                        cv2.imshow('bbox_' + str(1), bboxFiltered)
+                    # num_fingers = int((last_good_box["cent_x"]-.5) * 4)
+                    # print(num_fingers)
                 else:
-                    num_fingers = None
+                    #num_fingers = None
                     # Use the last good box
                     pass
 
@@ -351,26 +356,34 @@ class tele(object):
 
             ## Simple XY COntrol
             # X translation controls angular velocity, Y position controls linear
-            print(num_fingers, " fingers")
             num_match = 0
+            print(numFingers)
             for past_finger in past_fingers:
-                if past_finger == num_fingers:
+                if past_finger == numFingers:
                     num_match += 1
-            past_fingers.append(num_fingers)
+            past_fingers.append(numFingers)
             if len(past_fingers) > frames_in_gesture:
                 past_fingers[0]
             if num_match < finger_num_thresh:
-                num_fingers = None # Then don't do anyhting for this frame
-            if num_fingers is None:
+                numFingers = None # Then don't do anyhting for this frame
+            if numFingers is None:
                 # This means that the last frame wasn't good, maybe we should leave it
                 print("No new hand detected, continuing")
-            elif num_fingers == 0:
+            elif numFingers == 0:
                 lin_v = 0
                 ang_v = 0
-            elif num_fingers == 1:
+            elif numFingers == 4:
                 lin_v = -1
-            elif num_fingers == -1:
+                ang_v = 0
+            elif numFingers == 5:
                 lin_v = 1
+                ang_v = 0
+            elif numFingers == 3:
+                lin_v = 0
+                ang_v = 1
+            elif numFingers == 2:
+                lin_v = 0
+                ang_v = 1
             if position_control:
                 lin_v = y_pos
                 ang_v = x_pos
