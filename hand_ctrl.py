@@ -66,75 +66,91 @@ def segmentHand(frame):
     ret, frameFiltered = cv2.threshold(floatSum, 7, 8, cv2.THRESH_BINARY)
     frameFiltered[frameFiltered >= 8] = 255
 
+    frameFiltered = cv2.erode(frameFiltered, None, iterations=2)
+    frameFiltered = cv2.dilate(frameFiltered, None, iterations=6)
+    frameFiltered = cv2.erode(frameFiltered, None, iterations=2)
+
     return frameFiltered
 
 
 def isFinger(pt1, pt2, pt3):
-    threshold = 60  # degree threshold
+    '''
+    Based on the hull defects start, far, and stop points, return whether a particular point is a finger
+    '''
+    threshold = 90  # degree threshold
 
+    # Convert the tuple points to np arrays
     pt1 = np.asarray(pt1)
     pt2 = np.asarray(pt2)
     pt3 = np.asarray(pt3)
+
+    # Take the difference between the center points and two other points
     pt21 = pt1 - pt2
     pt32 = pt3 - pt2
 
+    # Calculate the angle between the three points
     cosine_angle = np.dot(pt21, pt32) / (np.linalg.norm(pt21) * np.linalg.norm(pt32))
     angle = np.arccos(cosine_angle)
 
+    # If the angle between the three points is less than the threshold value, the center point is a finger tip
     if np.degrees(angle) < threshold:
         return True
     else:
         return False
 
 
-def handSkeleton(img, imgFilt):
-    contours, hierarchy = cv2.findContours(imgFilt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+def handSkeleton(img, imgFilt, xOffset, yOffset):
+    '''
+    Given a binary mask, calculate the contour of the hand. Then, calculate the convex hull and corresponding convexity defects.
+    '''
+
+    # Calculate contours and draw them on webcam frame
+    contours, hierarchy = cv2.findContours(imgFilt, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE,
+                                           offset=(xOffset, yOffset))  # RETR_TREE, RETR_EXTERNAL
     contours = max(contours, key=lambda x: cv2.contourArea(x))
     cv2.drawContours(img, [contours], -1, (255, 255, 0), 2)
+
+    # Generate convex hull based on the contour
     hull = cv2.convexHull(contours, returnPoints=False)
-    try:
-        defects = cv2.convexityDefects(contours, hull, False)
-        points = []
-        pointsX = []
-        pointsY = []
-        startPT = []
-        endPT = []
-        farPT = []
-        for i in range(defects.shape[0]):
-            s, e, f, d = defects[i, 0]
-            start = tuple(contours[s][0])
-            end = tuple(contours[e][0])
-            far = tuple(contours[f][0])
-            points.extend([start, end, far])
-            pointsX.extend([start[0], end[0], far[0]])
-            pointsY.extend([start[1], end[1], far[1]])
-            if np.linalg.norm(np.array(start) - np.array(far)) > 10:  # 40
-                startPT.append(start)
-                farPT.append(far)
-                endPT.append(end)
 
-        clusters = hcluster.fclusterdata(points, 20, criterion="distance")  # 20 Threshold hardcoded
+    # Generate convexity defects based on convex hull
+    defects = cv2.convexityDefects(contours, hull, False)
 
-        startPT.append(startPT[0])
-        farPT.append(farPT[0])
-        endPT.append(endPT[0])
+    # Create lists of starting, ending and far points of convexity defects
+    points = []
+    pointsX = []
+    pointsY = []
+    startPT = []
+    endPT = []
+    farPT = []
+    for i in range(defects.shape[0]):
+        s, e, f, d = defects[i, 0]
+        start = tuple(contours[s][0])
+        end = tuple(contours[e][0])
+        far = tuple(contours[f][0])
 
-        avg = []
-        for i in range(1, len(startPT)):
-            startX = startPT[i][0]
-            startY = startPT[i][1]
-            endX = endPT[i - 1][0]
-            endY = endPT[i - 1][1]
+        if isFinger(start, far, end) and d > 5000:
+            points.extend([start, end])
+            pointsX.extend([start[0], end[0]])
+            pointsY.extend([start[1], end[1]])
 
-            if np.linalg.norm(np.array(start) - np.array(far)) < 20:
-                avgPT = tuple((round((startX + endX) / 2), round((startY + endY) / 2)))
-                avg.append(avgPT)
+    clusters = hcluster.fclusterdata(points, 20, criterion="distance")
 
-        return avg, farPT, img
+    for i in range(max(clusters)):
+        indices = np.asarray(np.where(clusters == i + 1)).astype(int)
+        indices = indices[0]
 
-    except:
-        pass
+        averagePointsX = np.take(pointsX, indices)
+        averagePointsY = np.take(pointsY, indices)
+        averagePointsX = round(np.average(averagePointsX))
+        averagePointsY = round(np.average(averagePointsY))
 
+        a = (averagePointsX, averagePointsY)
+        cv2.circle(img, (averagePointsX, averagePointsY), 10, [0, 255, 255], -1)
+
+    numFingers = max(clusters)
+
+    return numFingers, img
 
 class tele(object):
     def __init__(self):
@@ -237,7 +253,7 @@ class tele(object):
                         frame_score = self.compute_score(area_score, frme, info_dict, ml_score)
                         bbox_score += frame_score
                 # Print score output so that we can see how it fluctuates
-                cv2.putText(image, str(int(bbox_score)), (7, 170), font, 3, (120, 205, 40), 3, cv2.LINE_AA)
+                cv2.putText(image, str(int(bbox_score)), (7, 170), font, 1, (120, 205, 40), 3, cv2.LINE_AA)
 
                 # Add frame to past frames
                 past_frames.append(info_dict)
@@ -268,19 +284,16 @@ class tele(object):
                     FINGER SEGMENTATION TIME!!
                     """
                     bboxFiltered = segmentHand(bbox)
-                    contours, hierarchy = cv2.findContours(bboxFiltered, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE,
-                                                           offset=(xmin, ymin))
-                    origFrame = cv2.flip(frame, 1)
+                    numFingers = 0
                     try:
-                        contours = max(contours, key=lambda x: cv2.contourArea(x))
-                        cv2.drawContours(origFrame, [contours], -1, (255, 255, 0), 2)
-                        hull = cv2.convexHull(contours)
-                        cv2.drawContours(origFrame, [hull], -1, (0, 255, 255), 2)
-                    except ValueError:
+                        numFingers, image = handSkeleton(image, bboxFiltered, xmin, ymin)
+
+                    except:
+                        print("failed to get fingers")
                         pass
 
-                    cv2.imshow("contours", cv2.flip(origFrame, 1))
-                    cv2.imshow('bbox_' + str(1), bboxFiltered)
+                    cv2.putText(image, "# Fingers: " + str(numFingers), (7, 400), font, 1, (100, 255, 0), 3,
+                                cv2.LINE_AA)
 
                     # Visulaize the bboxes
                     viz_utils.visualize_boxes_and_labels_on_image_array(
