@@ -73,11 +73,12 @@ The three tools we need in order to be able to identify and count the number of 
 Once the binary mask has been created we can use the OpenCV's `findContours()` function to create a contour outlining the pixels belonging to the hand. After creating the contour, we used OpenCV's `convexHull()` function to create a convex polygon consisting of the outter most edges of the contour. Next, we used OpenCV's `convexityDefects()` function to identify major concavities within the convex hull.
 
 ### Identifying and Counting Fingers
-By using convexity defects we are able identify fingers. A convexity defect is made up of three points, the starting point, located on the convex hull, the deepest point in the cavity, furthest from the convex hull, and the ending point again located on the convex hull, but on the other side of the cavity. The cavities found in the spaces between fingers can be characterized as deep and very narrow. This means that the angle between the start, deepest, and end point form an acute angle.
+By using convexity defects we are able identify fingers. A convexity defect is made up of three points, the starting point, located on the convex hull, the deepest point in the cavity, furthest from the convex hull, and the ending point again located on the convex hull, but on the other side of the cavity. 
 
 <p align="center">
 <img width="393" height="525" src="/docs/images/hand_skeleton.png">
- Shown above is the three point cavities formed by the hand within the convex hull. Each cavities start is denoted by the blue point, deepest spot denoted by the red dot, and end point denoted by the purple dot. 
+  
+Shown above is the three point cavities formed by the hand within the convex hull. Each cavities start is denoted by the blue point, deepest spot denoted by the red dot, and end point denoted by the purple dot. The cavities found in the spaces between fingers can be characterized as deep and very narrow. This means that the angle between the start, deepest, and end point form an acute angle. If the angle between these three points is acute it can be assumed that the starting and ending points are located at finger tips. There are redundant points however. some finger tips have two start/end points on them, while others only have one. To solve this problem each of the suspected fingertip points is stored in an array, and hierarchical clustering is used to distinguish different fingertips. The total number of clusters is equivalent to the total number of fingers being held up. 
 
 ## ROS Node and other Integration
 #### Model Output processing
