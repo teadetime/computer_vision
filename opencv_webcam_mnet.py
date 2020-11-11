@@ -170,7 +170,7 @@ while(True):
                 frame_score = x_score+y_score+area_score+ml_score # Max should be around 5
                 bbox_score += frame_score
         #Print score output so that we can see how it fluctuates
-        cv2.putText(image, "BBox Score: " + str(int(bbox_score)), (7, 170), font, 1, (120, 205, 40), 3, cv2.LINE_AA)
+        cv2.putText(image, "BBox Score: " + str(int(bbox_score)), (7, 435), font, 1, (100, 255, 0), 3, cv2.LINE_AA)
         # Add frame to past frames
         past_frames.append(info_dict)
         avg_bbox_scores.append(bbox_score)
@@ -242,7 +242,7 @@ while(True):
     # converting the fps into integer
     fps = str(int(fps))
     # puting the FPS count on the frame
-    cv2.putText(image, "FPS: " + fps, (7, 70), font, 1, (100, 255, 0), 3, cv2.LINE_AA)
+    cv2.putText(image, "FPS: " + fps, (7, 470), font, 1, (100, 255, 0), 3, cv2.LINE_AA)
     cv2.imshow('Inference', image)
 
 
