@@ -13,6 +13,9 @@ Read on to see how this type of control is implemented.
 ![Running via xy hand control](/docs/images/handcontrol.gif)
 The above screen capture shows one way of control taht we implemented. The robot is controlled based on the x/y position of the localized hand.
 
+![Running via xy finger control](/docs/images/fingerDriving.gif)
+<p align="center">
+  <img width="1208" height="487" src="/docs/images/fingerDriving.gif">
 INSERT OTHER CONTROL METHOD and GIF HERE
 
 ## Machine Learning Model Development Process
