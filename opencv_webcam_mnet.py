@@ -13,6 +13,7 @@ import math
 warnings.filterwarnings('ignore')   # Suppress Matplotlib warnings
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as viz_utils
+import scipy.cluster.hierarchy as hcluster
 
 IMAGE_DIR = "images/another"
 IMAGE_PATHS = glob.glob(IMAGE_DIR+"/*")
@@ -24,6 +25,8 @@ run_inference = False
 prune = True
 save_video = False
 use_saved = False
+visualizeBBox = False
+visualizeContours = True
 
 import sys
 print(sys.path)
@@ -57,7 +60,7 @@ def isFinger(pt1,pt2,pt3):
     '''
     Based on the hull defects start, far, and stop points, return whether a particular point is a finger
     '''
-    threshold = 60 #degree threshold
+    threshold = 90 #degree threshold
 
     #Convert the tuple points to np arrays
     pt1 = np.asarray(pt1)
@@ -96,9 +99,11 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
     
     #Generate convexity defects based on convex hull
     defects = cv2.convexityDefects(contours,hull,False)
-    cv2.putText(img, "GOOD", (7, 70), font, 3, (300, 500, 0), 3, cv2.LINE_AA)
+    
     #Create lists of starting, ending and far points of convexity defects
     points = []
+    pointsX = []
+    pointsY = []
     startPT = []
     endPT = []
     farPT = []
@@ -107,37 +112,32 @@ def handSkeleton(img,imgFilt, xOffset, yOffset):
         start = tuple(contours[s][0])
         end = tuple(contours[e][0])
         far = tuple(contours[f][0])
-        points.extend([start,end,far])
+
+        if isFinger(start,far,end) and d > 5000:
+            points.extend([start,end])
+            pointsX.extend([start[0],end[0]])
+            pointsY.extend([start[1],end[1]])
         
-        #Ignore small noisy defects below threshold value
-        if np.linalg.norm(np.array(start)-np.array(far)) > 40: #40
-            cv2.circle(img,far,10,[255,255,255],-1)
-            cv2.circle(img,start,10,[0,255,0],-1)
-            cv2.circle(img,end,10,[0,0,255],-1)
-            startPT.append(start)
-            farPT.append(far)
-            endPT.append(end)
+    clusters = hcluster.fclusterdata(points, 20, criterion="distance")
+
+    for i in range(max(clusters)):
        
-    try:
-        startPT.append(startPT[0])
-        farPT.append(farPT[0])
-        endPT.append(endPT[0])
+        indices = np.asarray(np.where(clusters== i+1)).astype(int)
+        indices = indices[0]
         
-
-        avg = []
-        for i in range(1,len(startPT)):
-            startX = startPT[i][0]
-            startY = startPT[i][1]
-            endX = endPT[i-1][0]
-            endY = endPT[i-1][1]
-            
-            if np.linalg.norm(np.array(start)-np.array(end)) < 20:
-                avgPT = tuple((round((startX+endX)/2),round((startY+endY)/2)))
-                avg.append(avgPT)
-
-        return avg, farPT, img
-    except IndexError:
-        pass
+        averagePointsX = np.take(pointsX,indices)
+        averagePointsY = np.take(pointsY,indices)
+        averagePointsX = round(np.average(averagePointsX))
+        averagePointsY = round(np.average(averagePointsY))
+       
+        a = (averagePointsX,averagePointsY)
+        cv2.circle(img,(averagePointsX,averagePointsY),10,[0,255,255],-1)
+        
+    numFingers = max(clusters)
+    
+    return numFingers, img
+       
+    
 
 if not use_saved:
     cap = cv2.VideoCapture(0)
@@ -306,59 +306,42 @@ while(True):
             bbox = tf.image.crop_to_bounding_box(image,ymin,xmin, crop_h_inc, crop_w_inc).numpy()
             bboxes.append(bbox)
             bboxFiltered = segmentHand(bbox)
+            numFingers = 0
             try:
-                avg, farPT, image = handSkeleton(image, bboxFiltered, xmin, ymin)
-                numFingers = 0
-                for i in range(len(avg)):
-                    if isFinger(farPT[i],avg[i],farPT[i+1]):
-                        cv2.circle(image,avg[i],10,[0,255,255],-1)
-                        cv2.line(image,avg[i],farPT[i],[255,0,0],2)
-                        cv2.line(image,avg[i],farPT[i+1],[255,0,0],2)
-                        numFingers+=1
-                    if i<len(avg)-1:
-                        cv2.line(image,avg[i],avg[i+1],[255,0,255],2)
-                    else:
-                        cv2.line(image,avg[0],avg[i],[255,0,255],2)
-                cv2.putText(image, str(numFingers), (7, 400), font, 3, (100, 255, 0), 3, cv2.LINE_AA)
+                numFingers, image = handSkeleton(image, bboxFiltered, xmin, ymin)
+
             except:
                 pass
-            '''
-            contours, hierarchy = cv2.findContours(bboxFiltered, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset=(xmin,ymin))
-            origFrame = cv2.flip(frame,1)
-            try:
-                contours = max(contours, key=lambda x: cv2.contourArea(x))
-                cv2.drawContours(origFrame, [contours], -1, (255,255,0), 2)
-                hull = cv2.convexHull(contours)
-                cv2.drawContours(origFrame, [hull], -1, (0, 255, 255), 2)
-            except ValueError:
-                pass
-            
-            cv2.imshow("contours", cv2.flip(origFrame,1))
-            '''
-            cv2.imshow('bbox_'+str(1), bboxFiltered)
-            cv2.imshow('bbox', bbox)
 
-            # Visulaize the bboxes
-            viz_utils.visualize_boxes_and_labels_on_image_array(
-                image,
-                selected_boxes,
-                selected_classes,
-                selected_scores,
-                category_index,
-                use_normalized_coordinates=True,
-                max_boxes_to_draw=200,
-                min_score_thresh=.50,
-                agnostic_mode=False)
-            viz_utils.visualize_boxes_and_labels_on_image_array(
-                image,
-                new_selected_boxes,
-                selected_classes,
-                selected_scores,
-                category_index,
-                use_normalized_coordinates=True,
-                max_boxes_to_draw=200,
-                min_score_thresh=.50,
-                agnostic_mode=False)
+            cv2.putText(image, "Num Fingers: " +str(numFingers), (7, 400), font, 3, (100, 255, 0), 3, cv2.LINE_AA)
+            
+            
+
+            # Visualize the bboxes
+            if visualizeBBox:
+                viz_utils.visualize_boxes_and_labels_on_image_array(
+                    image,
+                    selected_boxes,
+                    selected_classes,
+                    selected_scores,
+                    category_index,
+                    use_normalized_coordinates=True,
+                    max_boxes_to_draw=200,
+                    min_score_thresh=.50,
+                    agnostic_mode=False)
+                viz_utils.visualize_boxes_and_labels_on_image_array(
+                    image,
+                    new_selected_boxes,
+                    selected_classes,
+                    selected_scores,
+                    category_index,
+                    use_normalized_coordinates=True,
+                    max_boxes_to_draw=200,
+                    min_score_thresh=.50,
+                    agnostic_mode=False)
+
+                cv2.imshow('bbox_'+str(1), bboxFiltered)
+            
         # Remove the first entry of the past frames and scores as long as they aren't empty
         if len(past_frames) > num_past_frames:
             del past_frames[0]
