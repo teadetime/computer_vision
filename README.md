@@ -65,6 +65,9 @@ We initially tried to loop through each pixel of each frame but that was very sl
 
 ![Hand Segmentation Example](/docs/images/segmentation.jpg)
 
+### Contours, Convex Hulls and Defects
+Once the binary mask has been created we can use the OpenCV's `findContours()` function to create a contour outlining the pixels belonging to the hand. 
+
 ## ROS Node and other Integration
 #### Model Output processing
 The model along with the webcam processing causes the software to run <20fps while running the neato simulator. We feel this is a reasonable rate for our purposes. This rate is still fast enough that there is a large chance of bad annotations being made during transition movements (our model isn’t perfect and it’s making 20 predictions a second) __we have decided to attempt to smooth the resulting bounding boxes.__ This allows us to save computation time and only preform finger detection on frames that are likely to be valid.
